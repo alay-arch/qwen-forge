@@ -15,7 +15,8 @@
     "test": "bun test"
   },
   "dependencies": {
-    "cloakbrowser": "^0.4.5"
+    "cloakbrowser": "^0.4.5",
+    "playwright-core": "^1.61.1"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
