@@ -1,0 +1,24 @@
+{
+  "name": "qwen-forge",
+  "version": "0.1.0-beta",
+  "description": "Standalone Qwen account generator with clean architecture",
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "qf": "./bin/qf"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --watch run src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "bun run typecheck",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "cloakbrowser": "^0.4.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "typescript": "^5.9.3"
+  }
+}

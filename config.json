@@ -1,0 +1,28 @@
+{
+  "version": "0.1.0-beta",
+  "server": {
+    "port": 3030
+  },
+  "browser": {
+    "profileDir": ".browser-profile",
+    "timeout": 30000
+  },
+  "mail": {
+    "apiUrl": "https://api.catchmail.io/api/v1",
+    "domain": "catchmail.io",
+    "timeout": 180
+  },
+  "qwen": {
+    "baseUrl": "https://chat.qwen.ai"
+  },
+  "storage": {
+    "dir": "data"
+  },
+  "logger": {
+    "file": "logs/app.log"
+  },
+  "cli": {
+    "language": "en",
+    "firstRun": false
+  }
+}
