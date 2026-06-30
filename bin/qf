@@ -1,29 +1,48 @@
 #!/usr/bin/env bash
-# Qwen Forge — CLi entry point
-#
-# Works in two modes:
-#   1. Development:  bin/qf  (resolves relative to this script)
-#   2. Installed:    ~/.qwen-forge/bin/qf  (uses QF_HOME or falls back)
-#
+# Qwen Forge — CLI entry point
+
 set -euo pipefail
 
-# Resolve the real script path through any symlink chain
-SCRIPT="$0"
-while [ -h "$SCRIPT" ]; do
-  DIR="$(dirname "$SCRIPT")"
+# Resolve the real script path through any symlink chain.
+SCRIPT="${BASH_SOURCE[0]:-$0}"
+while [ -L "$SCRIPT" ]; do
+  DIR="$(cd -P "$(dirname "$SCRIPT")" && pwd)"
   LINK="$(readlink "$SCRIPT")"
   case "$LINK" in
     /*) SCRIPT="$LINK" ;;
     *)  SCRIPT="$DIR/$LINK" ;;
   esac
 done
-SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT")" && pwd)"
+PROJECT_DIR="$(cd -P "$SCRIPT_DIR/.." && pwd)"
+
+# Verify Bun is available.
+if ! command -v bun >/dev/null 2>&1; then
+  printf >&2 "Qwen Forge requires Bun.\n"
+  printf >&2 "Install it: https://bun.sh\n"
+  exit 1
+fi
+
+# Verify installation integrity.
+ENTRY="$PROJECT_DIR/src/index.ts"
+PACKAGE_JSON="$PROJECT_DIR/package.json"
+
+if [ ! -f "$ENTRY" ] || [ ! -f "$PACKAGE_JSON" ]; then
+  printf >&2 "Qwen Forge installation appears to be corrupted.\n"
+  printf >&2 "Expected project at:\n"
+  printf >&2 "  %s\n" "$PROJECT_DIR"
+  exit 1
+fi
+
+# Read version once.
+VERSION="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$PACKAGE_JSON" \
+  | head -n1 \
+  | cut -d'"' -f4)"
 
 case "${1:-}" in
   --help|-h)
-    cat <<'HELP'
- Qwen Forge v0.1.2-beta
+    cat <<HELP
+ Qwen Forge v$VERSION
 
  Usage:
    qf                     Launch interactive menu
@@ -36,11 +55,11 @@ case "${1:-}" in
    README.en.md  English
 HELP
     exit 0
-    ;;
+        ;;
   --version|-v)
-    printf 'v0.1.2-beta\n'
+    printf 'v%s\n' "$VERSION"
     exit 0
-    ;;
+        ;;
 esac
 
-exec bun "$PROJECT_DIR/src/index.ts" -- "$@"
+exec bun "$ENTRY" "$@"
