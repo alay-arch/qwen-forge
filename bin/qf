@@ -7,13 +7,18 @@
 #
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve the real script path through any symlink chain
+SCRIPT="$0"
+while [ -h "$SCRIPT" ]; do
+  DIR="$(dirname "$SCRIPT")"
+  LINK="$(readlink "$SCRIPT")"
+  case "$LINK" in
+    /*) SCRIPT="$LINK" ;;
+    *)  SCRIPT="$DIR/$LINK" ;;
+  esac
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-# If installed via install.sh, QF_HOME points to ~/.qwen-forge
-if [ -n "${QF_HOME:-}" ]; then
-  PROJECT_DIR="$QF_HOME"
-fi
 
 case "${1:-}" in
   --help|-h)
