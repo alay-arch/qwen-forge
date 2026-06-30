@@ -1,6 +1,6 @@
 # Qwen Forge Documentation
 
-**v0.1.1-beta**
+**v0.1.2-beta**
 
 ---
 
@@ -20,5 +20,5 @@
 ## Quick links
 
 - [README.md](../README.md) — main project README
-- [config.json](../config.json) — configuration file
+- `config.json` — runtime configuration, created on first launch
 - [install.sh](../install.sh) — installation script

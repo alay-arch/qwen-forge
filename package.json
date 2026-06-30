@@ -1,7 +1,20 @@
 {
   "name": "qwen-forge",
-  "version": "0.1.1-beta",
+  "version": "0.1.2-beta",
   "description": "Standalone Qwen account generator with clean architecture",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alay-arch/qwen-forge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alay-arch/qwen-forge/issues"
+  },
+  "homepage": "https://github.com/alay-arch/qwen-forge#readme",
+  "keywords": ["qwen", "cli", "automation", "bun", "chromium"],
+  "engines": {
+    "bun": ">=1.3.0"
+  },
   "type": "module",
   "main": "src/index.ts",
   "bin": {

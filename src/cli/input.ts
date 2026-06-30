@@ -3,6 +3,7 @@ import readline from 'readline';
 import { readFileSync } from 'fs';
 import { Screen, divider, PALETTE, c } from '../theme.js';
 import { t } from '../i18n.js';
+import { VERSION } from '../version.js';
 
 const screen = new Screen();
 const isPipe = !Boolean(process.stdin.isTTY);
@@ -46,7 +47,7 @@ export async function showMenu(items: MenuItem[]): Promise<void> {
   while (true) {
     screen.clear();
     const lines: string[] = [];
-    lines.push(` ${t('title')}  v0.1.1-beta`);
+    lines.push(` ${t('title')}  v${VERSION}`);
     lines.push(divider());
     lines.push('');
     for (const item of items) {

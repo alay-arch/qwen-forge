@@ -1,13 +1,14 @@
 /** Mail — email generation, password generation, activation, mail polling with retry */
 import { sleep, sleepWithEsc, showCancelPrompt } from '../cli/helpers.js';
 import { isDebug } from '../utils/runtime.js';
+import { randomInt } from 'crypto';
 
 // ── Email generation ────────────────────────────────────────────────
 
 export function generateEmail(domain: string): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let user = '';
-  for (let i = 0; i < 10; i++) user += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 10; i++) user += chars[randomInt(chars.length)];
   return `${user}@${domain}`;
 }
 
@@ -19,16 +20,21 @@ export function generatePassword(length = 16): string {
   const digits = '0123456789';
   const special = '!@#$%';
   const all = upper + lower + digits + special;
-  let pwd = '';
-  for (let i = 0; i < length; i++) pwd += all[Math.floor(Math.random() * all.length)];
-  return pwd;
+  const chars = [upper[randomInt(upper.length)], lower[randomInt(lower.length)], digits[randomInt(digits.length)], special[randomInt(special.length)]];
+  for (let i = chars.length; i < length; i++) chars.push(all[randomInt(all.length)]);
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
 }
 
 // ── Activation via link with retry ─────────────────────────────────
 
 export async function activateAccount(link: string): Promise<boolean> {
   const debug = isDebug();
-  if (debug) console.log(`[DEBUG] Opening activation link: ${link}`);
+  if (!isAllowedActivationLink(link)) return false;
+  if (debug) console.log(`[DEBUG] Opening activation link: ${redactUrl(link)}`);
 
   for (let attempt = 0; attempt < 2; attempt++) {
     if (debug && attempt > 0) console.log(`[DEBUG] Activation retry attempt ${attempt + 1}/2`);
@@ -41,7 +47,7 @@ export async function activateAccount(link: string): Promise<boolean> {
       });
       if (debug) console.log(`[DEBUG] Activation response: ${resp.status} ${resp.statusText}`);
 
-      if (resp.ok || resp.status < 500) {
+      if (resp.ok) {
         if (debug) console.log(`[DEBUG] Activation successful`);
         return true;
       }
@@ -62,6 +68,25 @@ export async function activateAccount(link: string): Promise<boolean> {
 
   if (debug) console.log(`[DEBUG] Activation failed after 2 attempts`);
   return false;
+}
+
+function isAllowedActivationLink(link: string): boolean {
+  try {
+    const url = new URL(link);
+    return url.protocol === 'https:' && (url.hostname === 'chat.qwen.ai' || url.hostname.endsWith('.qwen.ai'));
+  } catch {
+    return false;
+  }
+}
+
+function redactUrl(link: string): string {
+  try {
+    const url = new URL(link);
+    if (url.search) url.search = '?...';
+    return url.toString();
+  } catch {
+    return '[invalid-url]';
+  }
 }
 
 // ── Mail API client with retry and exponential backoff ──────────────
@@ -145,31 +170,24 @@ export function extractActivationLink(message: any): string | null {
     console.log(`[DEBUG] body text length: ${bodyText.length}, body html length: ${bodyHtml.length}`);
   }
 
-  const qwenPattern = /https?:\/\/chat\.qwen\.ai[^\s"'>]*/i;
+  const qwenPattern = /https:\/\/[a-z0-9.-]*qwen\.ai[^\s"'>]*/i;
   const qwenMatch = searchText.match(qwenPattern);
-  if (qwenMatch) {
+  if (qwenMatch && isAllowedActivationLink(qwenMatch[0])) {
     if (debug) console.log(`[DEBUG] Found qwen.ai link: ${qwenMatch[0]}`);
     return qwenMatch[0];
   }
 
-  const patterns = [
-    /https?:\/\/[^\s"'>]*activate[^\s"'>]*/i,
-    /https?:\/\/[^\s"'>]*verify[^\s"'>]*/i,
-    /https?:\/\/[^\s"'>]*confirm[^\s"'>]*/i,
-    /https?:\/\/[^\s"'>]*signup[^\s"'>]*/i,
-    /https?:\/\/[^\s"'>]*\/auth[^\s"'>]*/i,
-    /https?:\/\/[^\s"'>]+/gi,
-  ];
+  const patterns = [/https:\/\/[a-z0-9.-]*qwen\.ai[^\s"'>]*(activate|verify|confirm|signup|\/auth)[^\s"'>]*/i];
 
   for (const pattern of patterns) {
     const match = searchText.match(pattern);
     if (match) {
       const link = match[0];
-      if (/unsubscribe|track|notification/i.test(link)) {
+      if (!isAllowedActivationLink(link) || /unsubscribe|track|notification/i.test(link)) {
         if (debug) console.log(`[DEBUG] Skipping excluded link: ${link}`);
         continue;
       }
-      if (debug) console.log(`[DEBUG] Found activation link: ${link}`);
+      if (debug) console.log(`[DEBUG] Found activation link: ${redactUrl(link)}`);
       return link;
     }
   }

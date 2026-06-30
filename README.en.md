@@ -1,6 +1,6 @@
 # Qwen Forge
 
-**v0.1.1-beta** — Automated account registration utility for Qwen (chat.qwen.ai) using disposable email via CatchMail.
+**v0.1.2-beta** — Automated account registration utility for Qwen (chat.qwen.ai) using disposable email via CatchMail.
 
 ---
 
@@ -25,7 +25,7 @@ Full documentation: [docs/](./docs/)
 
 ### Requirements
 
-- **Bun** ≥ 1.1 (https://bun.sh)
+- **Bun** ≥ 1.3 (https://bun.sh)
 - **Git** (for installation from the repository)
 - **OS**: Linux (Windows via WSL)
 
@@ -40,10 +40,10 @@ curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.s
 ```
 
 The install script:
-- Checks for Bun, Git, curl
+- Checks for Bun, Git, and curl/wget
 - Clones the repository to `~/.qwen-forge`
 - Installs dependencies
-- Registers the `qf` command globally in `~/.local/bin/qf`
+- Registers the user-local `qf` command in `~/.local/bin/qf`
 - On re-run, updates the existing installation
 
 After installation, open a new terminal and run:
@@ -58,17 +58,17 @@ qf
 git clone https://github.com/alay-arch/qwen-forge.git
 cd qwen-forge
 bun install
-bun run src/index.ts --help
+bun src/index.ts --help
 ```
 
 The `qf` command is not registered in this case. Use:
 
 ```bash
-bun run src/index.ts
+bun src/index.ts
 ./bin/qf
 ```
 
-To register globally:
+To register through Bun:
 
 ```bash
 bun link
@@ -80,32 +80,36 @@ After `bun link`, the `qf` command is available in the terminal.
 
 ## Chromium Runtime Requirements
 
-Qwen Forge uses **Chromium** (via Playwright) for browser automation. Chromium requires certain system libraries.
+Qwen Forge uses **Chromium** through CloakBrowser and Playwright for browser automation.
 
 ### Automatic Diagnostics
 
-On every launch, `qf` automatically checks for required libraries and verifies Chromium can start.
+On launch, `qf` first finds the Chromium binary that CloakBrowser will use, then runs a real minimal headless launch.
 
-If libraries are missing, a distro-specific install command is displayed.
+If Chromium starts successfully, diagnostics pass even when a separate library probe would have been inconclusive. This prevents false positives on Arch, Debian, and Ubuntu.
+
+If Chromium fails to start, stderr is analyzed for the actual reason: missing binary, execute permissions, shared-library loader error, or another launch error. Installation commands are shown only after that analysis.
 
 Diagnostics never installs packages automatically — manual installation is required.
 
-### Supported Distributions
+### Supported Diagnostic Distributions
+
+Diagnostics detect Linux via `/etc/os-release` and provide commands for Debian 12, Debian 13, Ubuntu LTS, Arch Linux, Fedora, RHEL, openSUSE, Alpine, Void, and Gentoo.
+
+Do not use the commands below as a mandatory preinstall checklist. They are examples; `qf` prints the minimal command only after a real Chromium launch failure.
 
 **Debian / Ubuntu:**
 ```bash
-sudo apt-get update && sudo apt-get install -y libnss3 libnspr4 libatk1.0-0t64 \
-  libatk-bridge2.0-0t64 libcups2t64 libdrm2 libdbus-1-3 libasound2t64 \
-  libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
-  libpango-1.0-0 libcairo2 libexpat1 libxshmfence1 libegl1 libgles2 \
-  libopenh264-7 libfreetype6 libfontconfig1 libharfbuzz0b libglib2.0-0t64
+# Debian 12 example: libcups2, libasound2, libglib2.0-0
+# Debian 13 / Ubuntu 24.04 example: libcups2t64, libasound2t64, libglib2.0-0t64
+sudo apt-get update && sudo apt-get install -y <package-from-diagnostics>
 ```
 
 **Arch Linux:**
 ```bash
-sudo pacman -S --needed nss nspr atk at-spi2-atk libcups libdrm dbus alsa-lib \
+sudo pacman -S --needed nss nspr at-spi2-core libcups libdrm dbus alsa-lib \
   libxkbcommon libxcomposite libxdamage libxrandr mesa pango cairo expat \
-  libxshmfence libegl libgles2 libopenh264 freetype2 fontconfig harfbuzz glib2
+  libxshmfence libglvnd libopenh264 freetype2 fontconfig harfbuzz glib2
 ```
 
 **Fedora / RHEL:**
@@ -117,9 +121,9 @@ sudo dnf install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-libs alsa-lib
 
 **openSUSE:**
 ```bash
-sudo zypper install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-1 alsa-lib \
-  libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm pango cairo expat \
-  libxshmfence libEGL1 libGLESv2 openh264 freetype2 fontconfig harfbuzz glib2
+sudo zypper --non-interactive install nss nspr atk at-spi2-atk cups-libs libdrm dbus-1 alsa-lib \
+  libxkbcommon libXcomposite libXdamage libXrandr Mesa-libgbm1 pango cairo expat \
+  libxshmfence Mesa-libEGL1 Mesa-libGLESv2-2 openh264 freetype2 fontconfig harfbuzz glib2
 ```
 
 **Alpine Linux:**
@@ -134,9 +138,10 @@ sudo apk add nss nspr atk at-spi2-atk cups-libs libdrm dbus alsa-lib \
 On launch (and in the Diagnostics menu item), the system checks:
 
 1. **Distribution type** — auto-detected via `/etc/os-release`
-2. **System libraries** — 26 required Chromium libraries are verified
-3. **Chromium launch** — actual `chromium --version` execution to verify runtime
-4. **Pre-registration** — additional check before opening the browser
+2. **Chromium binary** — `CLOAKBROWSER_BINARY_PATH`, `~/.cloakbrowser/chromium-*` cache, then system paths
+3. **Chromium launch** — real headless `about:blank` launch with project-safe flags
+4. **Failure reason** — stderr is analyzed only if launch fails
+5. **Pre-registration** — additional check before opening the browser
 
 If any check fails, a clear message with the installation command for your specific distro is displayed.
 
@@ -210,7 +215,7 @@ Log file: `logs/app.log`
 ## How It Works
 
 1. **Browser** is launched once on first use (lazy init)
-2. A shared page is used for all registrations — no browser restart between accounts
+2. A separate page is created for registration; the browser starts lazily and is protected against parallel double-starts
 3. After registration, the system waits for an email via CatchMail
 4. The activation link is extracted from the email
 5. After activation, logout is performed via `GET /api/v2/auths/signout`
@@ -238,7 +243,7 @@ qwen-forge/
 │   ├── config/
 │   │   └── manager.ts      # Config load/save/validate
 │   ├── diagnostics/
-│   │   ├── chromium.ts     # Chromium diagnostics (libraries, runtime)
+│   │   ├── chromium.ts     # Chromium diagnostics (real launch, stderr analysis)
 │   │   └── doctor.ts       # System diagnostics
 │   ├── mail/
 │   │   └── service.ts      # Email (generation, polling, activation)
@@ -264,7 +269,7 @@ qwen-forge/
 │       └── sanitizer.ts    # Log sanitizer
 ├── data/
 │   └── accounts.json       # Account database
-├── config.json             # Configuration
+├── config.json             # Runtime configuration, created locally and not committed
 ├── package.json
 └── tsconfig.json
 ```
@@ -277,7 +282,7 @@ The `config.json` file is created automatically on first launch.
 
 ```json
 {
-  "version": "0.1.1-beta",
+  "version": "0.1.2-beta",
   "server": { "port": 3030 },
   "browser": {
     "profileDir": ".browser-profile",

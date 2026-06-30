@@ -28,3 +28,6 @@ bun.lock
 *.tsbuildinfo
 .nyc_output
 .qa-*/
+config.json
+data/
+.qwen-forge.lock

@@ -23,6 +23,7 @@ export class BrowserManager {
   private busy = false;
   private startTime = 0;
   private sharedPage: any = null;
+  private startPromise: Promise<void> | null = null;
 
   constructor(logger: Logger, events: EventBus) {
     this.logger = logger.child('Browser');
@@ -37,20 +38,28 @@ export class BrowserManager {
   /** Start browser (lazy — no-op if already running) */
   async start(): Promise<void> {
     if (this.browser) return;
+    if (this.startPromise) return this.startPromise;
     if (!this.config) throw new Error('Not initialized');
+    this.startPromise = this.doStart();
+    try { await this.startPromise; } finally { this.startPromise = null; }
+  }
+
+  private async doStart(): Promise<void> {
+    const config = this.config;
+    if (!config) throw new Error('Not initialized');
     this.logger.info('Starting browser...');
     try {
       this.browser = await launchPersistentContext({
-        userDataDir: this.config.userDataDir,
-        headless: this.config.headless,
-        humanize: this.config.humanize,
-        geoip: this.config.geoip,
-        args: this.config.args,
+        userDataDir: config.userDataDir,
+        headless: config.headless,
+        humanize: config.humanize,
+        geoip: config.geoip,
+        args: config.args,
       });
       this.startTime = Date.now();
       this.busy = false;
       this.logger.success('Browser started');
-      await this.events.emit('browser:started', { profileDir: this.config.userDataDir }, 'BrowserManager');
+      await this.events.emit('browser:started', { profileDir: config.userDataDir }, 'BrowserManager');
     } catch (err: any) {
       this.logger.error('Browser start failed', { error: err.message });
       await this.events.emit('browser:error', { error: err.message }, 'BrowserManager');
@@ -60,6 +69,7 @@ export class BrowserManager {
 
   /** Stop browser — close context and all pages */
   async stop(): Promise<void> {
+    if (this.startPromise) await this.startPromise.catch(() => {});
     if (!this.browser) { this.busy = false; return; }
     this.logger.info('Stopping browser...');
     try {
@@ -79,7 +89,7 @@ export class BrowserManager {
   /** Get the shared persistent page. Creates it on first call. */
   async getSharedPage(): Promise<any> {
     if (!this.browser) await this.start();
-    if (!this.sharedPage) {
+    if (!this.sharedPage || this.sharedPage.isClosed?.()) {
       this.sharedPage = await this.browser!.newPage();
       this.logger.debug('Shared page created');
     }

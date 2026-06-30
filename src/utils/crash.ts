@@ -2,6 +2,7 @@
 import { appendFile, mkdir } from 'fs/promises';
 import { platform, arch, release, version } from 'os';
 import { getUptime } from './runtime.js';
+import { VERSION } from '../version.js';
 
 export interface CrashReport {
   timestamp: string;
@@ -39,7 +40,7 @@ export async function saveCrashReport(error: Error, command?: string): Promise<v
       arch: arch(),
       kernel: version(),
       nodeVersion: process.version,
-      projectVersion: '1.0.0',
+      projectVersion: VERSION,
     },
     uptime: getUptime() + 'ms',
     stack: error.stack,

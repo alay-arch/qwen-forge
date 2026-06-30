@@ -1,6 +1,6 @@
 # Документация Qwen Forge
 
-**v0.1.1-beta**
+**v0.1.2-beta**
 
 ---
 
@@ -20,5 +20,5 @@
 ## Быстрые ссылки
 
 - [README.md](../README.md) — главный README проекта
-- [config.json](../config.json) — конфигурация
+- `config.json` — runtime-конфигурация, создаётся при первом запуске
 - [install.sh](../install.sh) — скрипт установки

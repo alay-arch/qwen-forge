@@ -37,14 +37,16 @@ export class Server {
         port: this.port,
         hostname: this.host,
         fetch: async (req: Request) => {
-          if (req.method === 'OPTIONS') {
-            return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' } });
-          }
           const url = new URL(req.url);
+          const origin = req.headers.get('origin');
+          if (origin && origin !== `http://${this.host}:${this.port}` && origin !== `http://127.0.0.1:${this.port}`) {
+            return Response.json({ error: 'Forbidden' }, { status: 403 });
+          }
+          if (req.method === 'OPTIONS') return new Response(null, { status: 204 });
           const key = `${req.method}:${url.pathname}`;
           const handler = this.routes.get(key);
           if (handler) {
-            try { return await handler(req); } catch (err: any) { return Response.json({ error: err.message }, { status: 500 }); }
+            try { return await handler(req); } catch (err: any) { this.logger.error('HTTP handler failed', { error: err.message }); return Response.json({ error: 'Internal server error' }, { status: 500 }); }
           }
           return Response.json({ error: 'Not found' }, { status: 404 });
         },
@@ -75,19 +77,33 @@ export function registerRoutes(server: Server, browser: BrowserManager, registra
   server.get('/api/ping', async () => Response.json({ status: 'ok', version: config.version }));
 
   server.post('/api/register', async (req) => {
-    const { email, password } = await req.json() as any;
+    let body: any;
+    try { body = await req.json(); } catch { return Response.json({ error: 'Invalid JSON' }, { status: 400 }); }
+    const { email, password } = body;
+    if (typeof email !== 'string' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || typeof password !== 'string' || password.length < 8 || password.length > 256) {
+      return Response.json({ error: 'Invalid email or password' }, { status: 400 });
+    }
+    if (browser.isBusy()) return Response.json({ error: 'Browser is busy' }, { status: 409 });
+    browser.setBusy(true);
     const page = await browser.createPage();
     try {
       const result = await registration.register(page, email, password, config.qwen.baseUrl);
       return Response.json(result);
     } finally {
       await browser.closePage(page);
+      browser.setBusy(false);
     }
   });
 
   server.post('/api/logout', async () => {
+    if (browser.isBusy()) return Response.json({ error: 'Browser is busy' }, { status: 409 });
+    browser.setBusy(true);
     const page = await browser.getSharedPage();
-    const result = await logout.logout(page, config.qwen.baseUrl);
-    return Response.json(result);
+    try {
+      const result = await logout.logout(page, config.qwen.baseUrl);
+      return Response.json(result);
+    } finally {
+      browser.setBusy(false);
+    }
   });
 }

@@ -15,7 +15,7 @@ export class Lock {
       else return false;
     }
     try {
-      await writeFile(this.file, String(process.pid), 'utf-8');
+      await writeFile(this.file, String(process.pid), { encoding: 'utf-8', flag: 'wx', mode: 0o600 });
       return true;
     } catch { return false; }
   }

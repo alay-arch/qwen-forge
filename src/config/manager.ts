@@ -4,11 +4,12 @@ import type { AppConfig, Language } from '../types.js';
 import { Screen, divider, PALETTE, c, bold, dim } from '../theme.js';
 import { t, setLanguage } from '../i18n.js';
 import { readAnswer, confirmAction } from '../cli/input.js';
+import { VERSION } from '../version.js';
 
 const screen = new Screen();
 
 export const DEFAULT_CONFIG: AppConfig = {
-  version: '0.1.1-beta',
+  version: VERSION,
   server: { port: 3030 },
   browser: { profileDir: '.browser-profile', timeout: 30000 },
   mail: { apiUrl: 'https://api.catchmail.io/api/v1', domain: 'catchmail.io', timeout: 180 },
@@ -45,7 +46,7 @@ export function validate(cfg: any): { valid: boolean; errors: string[] } {
 /** Auto-fix invalid config values to defaults, returns list of fixes applied */
 export function autoFix(cfg: any): string[] {
   const fixes: string[] = [];
-  if (!cfg.version) { cfg.version = DEFAULT_CONFIG.version; fixes.push('version → 1.0.0'); }
+  if (!cfg.version) { cfg.version = DEFAULT_CONFIG.version; fixes.push(`version → ${DEFAULT_CONFIG.version}`); }
   if (cfg.server?.port === undefined || cfg.server?.port === null || typeof cfg.server.port !== 'number' || !Number.isInteger(cfg.server.port) || cfg.server.port < 1 || cfg.server.port > 65535) {
     cfg.server = cfg.server || {}; cfg.server.port = DEFAULT_CONFIG.server.port; fixes.push('server.port → 3030');
   }
@@ -87,10 +88,10 @@ export function autoFix(cfg: any): string[] {
 const MIGRATIONS: { from: string; to: string; migrate: (c: any) => any }[] = [
   {
     from: '0.0.0',
-    to: '1.0.0',
+    to: VERSION,
     migrate: (c: any) => ({
       ...c,
-      version: '1.0.0',
+      version: VERSION,
       server: c.server || { port: 3030 },
       browser: c.browser || { profileDir: '.browser-profile', timeout: 30000 },
       mail: c.mail || { apiUrl: 'https://api.catchmail.io/api/v1', domain: 'catchmail.io', timeout: 180 },
@@ -214,7 +215,7 @@ export class ConfigManager {
     if (choice === '1') await ConfigManager.editScreen(manager);
     else if (choice === '2') {
       const ok = await confirmAction(t('config.reset_confirm'));
-      if (ok) { manager.reset(); process.stdout.write(`\n ${c(PALETTE.SUCCESS, `${'✓'} ${t('config.saved')}`)}\n`); }
+      if (ok) { await manager.reset(); process.stdout.write(`\n ${c(PALETTE.SUCCESS, `${'✓'} ${t('config.saved')}`)}\n`); }
     }
     await readAnswer(` ${dim('[ENTER] →')} `);
   }

@@ -80,10 +80,14 @@ export async function createAccount(ctx: AppContext): Promise<boolean> {
   const chromDiag = runChromiumDiagnostic();
   if (!chromDiag.canLaunch) {
     logger?.error('Chromium runtime check failed before registration');
-    if (chromDiag.installCmd.length > 0) {
-      process.stdout.write(`\n ${c(PALETTE.ERROR, `${'✗'} Missing Chromium system libraries`)}\n`);
-      process.stdout.write(` ${dim('Install them and try again:')}\n\n`);
-      process.stdout.write(`   ${c(PALETTE.PRIMARY, chromDiag.installCmd[0])}\n\n`);
+    if (chromDiag.missingLib) {
+      process.stdout.write(`\n ${c(PALETTE.ERROR, `${'✗'} Missing library: ${chromDiag.missingLib}`)}\n`);
+      if (chromDiag.installCmd.length > 0) {
+        process.stdout.write(` ${dim('Install the missing library:')}\n\n`);
+        process.stdout.write(`   ${c(PALETTE.PRIMARY, chromDiag.installCmd[0])}\n\n`);
+      }
+    } else if (!chromDiag.binaryFound) {
+      process.stdout.write(`\n ${c(PALETTE.ERROR, `${'✗'} Chromium binary not found`)}\n\n`);
     } else {
       process.stdout.write(`\n ${c(PALETTE.ERROR, `${'✗'} ${chromDiag.launchError || 'Chromium not available'}`)}\n\n`);
     }

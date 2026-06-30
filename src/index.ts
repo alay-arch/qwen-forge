@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Qwen Forge v0.1.1-beta — Minimal, professional CLI */
+/** Qwen Forge v0.1.2-beta — Minimal, professional CLI */
 
 import { Lock } from './utils/lock.js';
 import { ConfigManager } from './config/manager.js';
@@ -27,6 +27,7 @@ import { sleep } from './cli/helpers.js';
 import { initRuntime, isDebug } from './utils/runtime.js';
 import { saveCrashReport } from './utils/crash.js';
 import { runChromiumDiagnostic } from './diagnostics/chromium.js';
+import { VERSION } from './version.js';
 
 let isShuttingDown = false;
 let context: AppContext | null = null;
@@ -36,9 +37,8 @@ const screen = new Screen();
 // ── Help ─────────────────────────────────────────────────────────────
 
 function printHelp(): void {
-  const v = '0.1.1-beta';
   console.log(`
- Qwen Forge v${v}
+ Qwen Forge v${VERSION}
 
  Usage:
    qf                     Запуск интерактивного меню
@@ -71,7 +71,7 @@ async function bootstrap(): Promise<void> {
     return;
   }
   if (rawArgs.includes('--version') || rawArgs.includes('-v')) {
-    console.log('0.1.1-beta');
+    console.log(`v${VERSION}`);
     return;
   }
 
@@ -124,7 +124,7 @@ async function bootstrap(): Promise<void> {
   // Chromium runtime check
   const chromDiag = runChromiumDiagnostic();
   if (!chromDiag.canLaunch) {
-    if (chromDiag.launchError?.includes('error while loading shared libraries') || !chromDiag.allLibsFound) {
+    if (chromDiag.missingLib) {
       console.error(`\n ${c(PALETTE.ERROR, `${'✗'} ${t('errors.chromium_missing_libs')}`)}\n`);
       if (chromDiag.installCmd.length > 0) {
         console.error(` ${dim(t('errors.chromium_run_cmd'))}\n`);
@@ -132,7 +132,7 @@ async function bootstrap(): Promise<void> {
       }
       await cleanup(); process.exit(1);
     }
-    if (chromDiag.launchError) {
+    if (!chromDiag.binaryFound) {
       console.error(`\n ${c(PALETTE.WARNING, `${'⚠'} ${t('errors.chromium_not_found')}`)}\n`);
     }
   }
@@ -315,22 +315,23 @@ async function cleanup(): Promise<void> {
   } catch {}
 }
 
+async function fatalExit(err: Error, source: string): Promise<void> {
+  console.error(`\n ${c(PALETTE.ERROR, `${'✗'} ${err.message}`)}\n`);
+  await saveCrashReport(err, source).catch(() => {});
+  await shutdown().catch(async () => { await cleanup(); });
+  process.exit(1);
+}
+
 process.on('SIGINT', async () => { console.log(); await shutdown(); process.exit(0); });
 process.on('SIGTERM', async () => { await shutdown(); process.exit(0); });
 process.on('uncaughtException', async (err) => {
-  console.error(`\n ${c(PALETTE.ERROR, `${'✗'} ${err.message}`)}\n`);
-  await saveCrashReport(err, 'uncaughtException');
-  await cleanup(); process.exit(1);
+  await fatalExit(err, 'uncaughtException');
 });
 process.on('unhandledRejection', async (reason: any) => {
   const err = reason instanceof Error ? reason : new Error(String(reason?.message || reason));
-  console.error(`\n ${c(PALETTE.ERROR, `${'✗'} ${err.message}`)}\n`);
-  await saveCrashReport(err, 'unhandledRejection');
-  await cleanup(); process.exit(1);
+  await fatalExit(err, 'unhandledRejection');
 });
 
 bootstrap().catch(async (err) => {
-  console.error(`\n ${c(PALETTE.ERROR, `${'✗'} ${err.message}`)}\n`);
-  await saveCrashReport(err, 'bootstrap');
-  await cleanup(); process.exit(1);
+  await fatalExit(err, 'bootstrap');
 });

@@ -28,10 +28,10 @@ export class Storage {
   }
 
   private async save(): Promise<void> {
-    this.writeQueue = this.writeQueue.then(async () => {
+    this.writeQueue = this.writeQueue.catch(() => {}).then(async () => {
       const tmp = `${this.filePath}.tmp`;
       await mkdir(dirname(this.filePath), { recursive: true });
-      await writeFile(tmp, JSON.stringify(this.accounts, null, 2), 'utf-8');
+      await writeFile(tmp, JSON.stringify(this.accounts, null, 2), { encoding: 'utf-8', mode: 0o600 });
       await rename(tmp, this.filePath);
     });
     await this.writeQueue;

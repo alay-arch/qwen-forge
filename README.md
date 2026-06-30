@@ -1,6 +1,6 @@
 # Qwen Forge
 
-**v0.1.1-beta** — утилита для автоматической регистрации аккаунтов на Qwen (chat.qwen.ai) через одноразовую почту CatchMail.
+**v0.1.2-beta** — утилита для автоматической регистрации аккаунтов на Qwen (chat.qwen.ai) через одноразовую почту CatchMail.
 
 ---
 
@@ -25,7 +25,7 @@
 
 ### Требования
 
-- **Bun** ≥ 1.1 (https://bun.sh)
+- **Bun** ≥ 1.3 (https://bun.sh)
 - **Git** (для установки из репозитория)
 - **ОС**: Linux (Windows через WSL)
 
@@ -40,7 +40,7 @@ curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.s
 ```
 
 Скрипт install.sh:
-- Проверяет наличие Bun, Git, curl
+- Проверяет наличие Bun, Git и curl/wget
 - Клонирует репозиторий в `~/.qwen-forge`
 - Устанавливает зависимости
 - Регистрирует глобальную команду `qf` в `~/.local/bin/qf`
@@ -58,13 +58,13 @@ qf
 git clone https://github.com/alay-arch/qwen-forge.git
 cd qwen-forge
 bun install
-bun run src/index.ts --help
+bun src/index.ts --help
 ```
 
 Команда `qf` в этом случае не регистрируется. Используйте:
 
 ```bash
-bun run src/index.ts
+bun src/index.ts
 ./bin/qf
 ```
 
@@ -80,32 +80,36 @@ bun link
 
 ## Требования к Chromium
 
-Qwen Forge использует **Chromium** (через Playwright) для автоматизации регистрации. Chromium требует определённых системных библиотек.
+Qwen Forge использует **Chromium** через CloakBrowser и Playwright для автоматизации регистрации.
 
 ### Автоматическая диагностика
 
-При каждом запуске `qf` автоматически проверяет наличие необходимых библиотек и возможность запуска Chromium.
+При запуске `qf` диагностика сначала ищет бинарник Chromium, который будет использовать CloakBrowser, затем выполняет реальный минимальный headless-запуск.
 
-Если библиотеки отсутствуют — будет показана команда для их установки, специфичная для вашего дистрибутива.
+Если Chromium запускается успешно, диагностика считается успешной даже при несовпадениях в отдельных системных проверках. Это исключает ложные ошибки на Arch, Debian и Ubuntu.
+
+Если Chromium не запускается, stderr анализируется на конкретную причину: отсутствующий бинарник, права запуска, ошибка загрузки shared library или другая ошибка. Команда установки показывается только после такого анализа.
 
 Установка происходит только вручную — скрипт диагностики никогда не устанавливает пакеты автоматически.
 
-### Поддерживаемые дистрибутивы
+### Поддерживаемые дистрибутивы диагностики
+
+Диагностика определяет Linux-дистрибутив через `/etc/os-release` и подбирает команды для Debian 12, Debian 13, Ubuntu LTS, Arch Linux, Fedora, RHEL, openSUSE, Alpine, Void и Gentoo.
+
+Не используйте команды ниже как обязательный preinstall-чеклист. Они приведены как справка; `qf` сам покажет минимальную команду только при реальном отказе запуска Chromium.
 
 **Debian / Ubuntu:**
 ```bash
-sudo apt-get update && sudo apt-get install -y libnss3 libnspr4 libatk1.0-0t64 \
-  libatk-bridge2.0-0t64 libcups2t64 libdrm2 libdbus-1-3 libasound2t64 \
-  libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
-  libpango-1.0-0 libcairo2 libexpat1 libxshmfence1 libegl1 libgles2 \
-  libopenh264-7 libfreetype6 libfontconfig1 libharfbuzz0b libglib2.0-0t64
+# Debian 12 пример: libcups2, libasound2, libglib2.0-0
+# Debian 13 / Ubuntu 24.04 пример: libcups2t64, libasound2t64, libglib2.0-0t64
+sudo apt-get update && sudo apt-get install -y <пакет-из-диагностики>
 ```
 
 **Arch Linux:**
 ```bash
-sudo pacman -S --needed nss nspr atk at-spi2-atk libcups libdrm dbus alsa-lib \
+sudo pacman -S --needed nss nspr at-spi2-core libcups libdrm dbus alsa-lib \
   libxkbcommon libxcomposite libxdamage libxrandr mesa pango cairo expat \
-  libxshmfence libegl libgles2 libopenh264 freetype2 fontconfig harfbuzz glib2
+  libxshmfence libglvnd libopenh264 freetype2 fontconfig harfbuzz glib2
 ```
 
 **Fedora / RHEL:**
@@ -117,9 +121,9 @@ sudo dnf install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-libs alsa-lib
 
 **openSUSE:**
 ```bash
-sudo zypper install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-1 alsa-lib \
-  libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm pango cairo expat \
-  libxshmfence libEGL1 libGLESv2 openh264 freetype2 fontconfig harfbuzz glib2
+sudo zypper --non-interactive install nss nspr atk at-spi2-atk cups-libs libdrm dbus-1 alsa-lib \
+  libxkbcommon libXcomposite libXdamage libXrandr Mesa-libgbm1 pango cairo expat \
+  libxshmfence Mesa-libEGL1 Mesa-libGLESv2-2 openh264 freetype2 fontconfig harfbuzz glib2
 ```
 
 **Alpine Linux:**
@@ -134,9 +138,10 @@ sudo apk add nss nspr atk at-spi2-atk cups-libs libdrm dbus alsa-lib \
 При запуске (и в разделе «Диагностика» в меню) проверяется:
 
 1. **Тип дистрибутива** — определяется автоматически через `/etc/os-release`
-2. **Системные библиотеки** — проверка 26 библиотек, необходимых Chromium
-3. **Запуск Chromium** — реальный запуск `chromium --version` для проверки работоспособности
-4. **Перед регистрацией** — дополнительная проверка перед открытием браузера
+2. **Бинарник Chromium** — `CLOAKBROWSER_BINARY_PATH`, кэш `~/.cloakbrowser/chromium-*`, затем системные пути
+3. **Запуск Chromium** — реальный headless-запуск `about:blank` с безопасными флагами проекта
+4. **Причина отказа** — stderr анализируется только если запуск не удался
+5. **Перед регистрацией** — дополнительная проверка перед открытием браузера
 
 Если какая-либо проверка не пройдена — выводится понятное сообщение с командой для установки.
 
@@ -210,7 +215,7 @@ qf --debug
 ## Как работает проект
 
 1. **Браузер** запускается один раз при первом обращении (lazy init)
-2. Для регистрации используется общая страница (shared page) — без перезапуска браузера между аккаунтами
+2. Для регистрации создаётся отдельная страница, браузер запускается лениво и защищён от параллельного двойного старта
 3. После регистрации ожидается письмо на CatchMail
 4. Из письма извлекается ссылка активации
 5. После активации выполняется logout через `GET /api/v2/auths/signout`
@@ -238,7 +243,7 @@ qwen-forge/
 │   ├── config/
 │   │   └── manager.ts      # Загрузка/сохранение конфигурации
 │   ├── diagnostics/
-│   │   ├── chromium.ts     # Диагностика Chromium (библиотеки, запуск)
+│   │   ├── chromium.ts     # Диагностика Chromium (реальный запуск, stderr-анализ)
 │   │   └── doctor.ts       # Диагностика системы
 │   ├── mail/
 │   │   └── service.ts      # Почта (генерация, получение, активация)
@@ -264,7 +269,7 @@ qwen-forge/
 │       └── sanitizer.ts    # Санитайзер логов
 ├── data/
 │   └── accounts.json       # База аккаунтов
-├── config.json             # Конфигурация
+├── config.json             # Runtime-конфигурация, создаётся локально и не коммитится
 ├── package.json
 └── tsconfig.json
 ```
@@ -277,7 +282,7 @@ qwen-forge/
 
 ```json
 {
-  "version": "0.1.1-beta",
+  "version": "0.1.2-beta",
   "server": {
     "port": 3030
   },

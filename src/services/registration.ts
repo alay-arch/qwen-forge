@@ -108,15 +108,15 @@ export class RegistrationService {
     const maxWait = 10000;
     const start = Date.now();
     const indicators = ['check your email', 'проверьте почту', 'подтвердите', 'verify', 'verification', 'sent', 'отправлено', 'подтверждение'];
+    const failures = ['captcha', 'rate limit', 'too many', 'blocked', 'invalid', 'ошибка', 'слишком много'];
 
     while (Date.now() - start < maxWait) {
       try {
         const now = page.url();
-        if (now !== urlBefore) return { success: true, message: 'Redirected after submit' };
-
         const body = await page.evaluate(() => document.body?.innerText || '');
-        const lower = body.toLowerCase();
+        const lower = `${now}\n${body}`.toLowerCase();
         for (const ind of indicators) { if (lower.includes(ind)) return { success: true, message: `Success indicator: ${ind}` }; }
+        for (const fail of failures) { if (lower.includes(fail)) return { success: false, error: `Failure indicator: ${fail}` }; }
 
         const errEls = await page.$$('.text-red-500, .text-red-600, [class*="error"], [class*="Error"]');
         for (const el of errEls) { if (await el.isVisible()) return { success: false, error: 'Validation errors visible' }; }

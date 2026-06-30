@@ -6,12 +6,9 @@ import { ConnectivityChecker } from '../utils/network.js';
 import { validate } from '../config/manager.js';
 import { readAnswer } from '../cli/input.js';
 import { existsSync, accessSync, constants, statfsSync } from 'fs';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { platform, arch, release, totalmem, freemem } from 'os';
 import { runChromiumDiagnostic } from './chromium.js';
 
-const execAsync = promisify(exec);
 const screen = new Screen();
 
 interface CheckResult {
@@ -23,13 +20,11 @@ interface CheckResult {
 
 async function checkCommand(cmd: string): Promise<{ exists: boolean; version?: string }> {
   try {
-    const { stdout } = await execAsync(`which ${cmd}`);
-    if (!stdout.trim()) return { exists: false };
+    if (!Bun.which(cmd)) return { exists: false };
     try {
-      const versionCmd = cmd === 'bun' ? 'bun --version' :
-                         cmd === 'git' ? 'git --version' :
-                         `${cmd} --version`;
-      const { stdout: version } = await execAsync(versionCmd);
+      const proc = Bun.spawn([cmd, '--version'], { stdout: 'pipe', stderr: 'ignore' });
+      const version = await new Response(proc.stdout).text();
+      await proc.exited;
       return { exists: true, version: version.trim().split('\n')[0] };
     } catch {
       return { exists: true };
@@ -131,7 +126,7 @@ export async function runDoctor(ctx: AppContext): Promise<void> {
   // 11. Browser
   results.push({ name: 'Browser', status: browserManager.isRunning() ? 'passed' : 'warning', detail: browserManager.isRunning() ? 'Running' : 'Not started (lazy init)' });
 
-  // 12. Chromium Dependencies
+  // 12. Chromium Runtime
   spinner.start('Checking Chromium...');
   const diag = runChromiumDiagnostic();
   spinner.stop();
@@ -141,19 +136,19 @@ export async function runDoctor(ctx: AppContext): Promise<void> {
 
   if (diag.canLaunch) {
     chromStatus = 'passed';
-    chromDetail = 'Chromium runtime OK';
-  } else if (diag.launchError?.includes('error while loading shared libraries') || !diag.allLibsFound) {
+    chromDetail = diag.binaryPath || 'Chromium runtime OK';
+  } else if (diag.missingLib) {
     chromStatus = 'failed';
-    chromDetail = `${diag.missing.length} missing libraries`;
-    chromRec = diag.installCmd.length > 0 ? `Run: ${diag.installCmd[0]}` : 'Install Chromium system dependencies';
-  } else if (!diag.allLibsFound) {
-    chromStatus = 'failed';
-    chromDetail = `${diag.missing.length} missing dependencies`;
-    chromRec = diag.installCmd.length > 0 ? `Run: ${diag.installCmd[0]}` : undefined;
+    chromDetail = `Missing: ${diag.missingLib}`;
+    chromRec = diag.installCmd.length > 0 ? `Run: ${diag.installCmd[0]}` : 'Install the missing system library';
+  } else if (!diag.binaryFound) {
+    chromStatus = 'warning';
+    chromDetail = 'No Chromium binary found';
+    chromRec = 'CloakBrowser will download its own Chromium on first launch';
   } else {
     chromStatus = 'warning';
-    chromDetail = diag.launchError || 'No Chromium binary found';
-    chromRec = 'cloakbrowser will download its own Chromium binary on first launch';
+    chromDetail = diag.launchError || 'Chromium check failed';
+    chromRec = 'Check system configuration';
   }
   results.push({ name: 'Chromium Runtime', status: chromStatus, detail: chromDetail, recommendation: chromRec });
 

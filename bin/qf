@@ -15,4 +15,27 @@ if [ -n "${QF_HOME:-}" ]; then
   PROJECT_DIR="$QF_HOME"
 fi
 
-exec bun run "$PROJECT_DIR/src/index.ts" "$@"
+case "${1:-}" in
+  --help|-h)
+    cat <<'HELP'
+ Qwen Forge v0.1.2-beta
+
+ Usage:
+   qf                     Launch interactive menu
+   qf --debug             Run with TRACE logging
+   qf --help              Show help
+   qf --version           Show version
+
+ Documentation:
+   README.md     Russian
+   README.en.md  English
+HELP
+    exit 0
+    ;;
+  --version|-v)
+    printf 'v0.1.2-beta\n'
+    exit 0
+    ;;
+esac
+
+exec bun "$PROJECT_DIR/src/index.ts" -- "$@"
