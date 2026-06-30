@@ -15,14 +15,14 @@ SPIN_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
 stop_spinner() {
     if [ -n "${SPINNER_PID:-}" ]; then
-        # Проверяем, что процесс ещё жив, прежде чем ждать
+        # Проверяем, что процесс ещё существует, прежде чем взаимодействовать
         if kill -0 "$SPINNER_PID" 2>/dev/null; then
             kill "$SPINNER_PID" 2>/dev/null || true
             wait "$SPINNER_PID" 2>/dev/null || true
         fi
         SPINNER_PID=""
     fi
-    # Очистка строки от остатков спиннера
+    # Очищаем строку от остатков спиннера
     printf '\r\033[K' >&2
 }
 
