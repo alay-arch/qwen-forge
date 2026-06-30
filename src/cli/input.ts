@@ -46,7 +46,7 @@ export async function showMenu(items: MenuItem[]): Promise<void> {
   while (true) {
     screen.clear();
     const lines: string[] = [];
-    lines.push(` ${t('title')}  v0.1.0-beta`);
+    lines.push(` ${t('title')}  v0.1.1-beta`);
     lines.push(divider());
     lines.push('');
     for (const item of items) {

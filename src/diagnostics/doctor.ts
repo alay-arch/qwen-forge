@@ -9,6 +9,7 @@ import { existsSync, accessSync, constants, statfsSync } from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { platform, arch, release, totalmem, freemem } from 'os';
+import { runChromiumDiagnostic } from './chromium.js';
 
 const execAsync = promisify(exec);
 const screen = new Screen();
@@ -130,7 +131,33 @@ export async function runDoctor(ctx: AppContext): Promise<void> {
   // 11. Browser
   results.push({ name: 'Browser', status: browserManager.isRunning() ? 'passed' : 'warning', detail: browserManager.isRunning() ? 'Running' : 'Not started (lazy init)' });
 
-  // 12. Disk Space
+  // 12. Chromium Dependencies
+  spinner.start('Checking Chromium...');
+  const diag = runChromiumDiagnostic();
+  spinner.stop();
+  let chromStatus: 'passed' | 'warning' | 'failed';
+  let chromDetail: string;
+  let chromRec: string | undefined;
+
+  if (diag.canLaunch) {
+    chromStatus = 'passed';
+    chromDetail = 'Chromium runtime OK';
+  } else if (diag.launchError?.includes('error while loading shared libraries') || !diag.allLibsFound) {
+    chromStatus = 'failed';
+    chromDetail = `${diag.missing.length} missing libraries`;
+    chromRec = diag.installCmd.length > 0 ? `Run: ${diag.installCmd[0]}` : 'Install Chromium system dependencies';
+  } else if (!diag.allLibsFound) {
+    chromStatus = 'failed';
+    chromDetail = `${diag.missing.length} missing dependencies`;
+    chromRec = diag.installCmd.length > 0 ? `Run: ${diag.installCmd[0]}` : undefined;
+  } else {
+    chromStatus = 'warning';
+    chromDetail = diag.launchError || 'No Chromium binary found';
+    chromRec = 'cloakbrowser will download its own Chromium binary on first launch';
+  }
+  results.push({ name: 'Chromium Runtime', status: chromStatus, detail: chromDetail, recommendation: chromRec });
+
+  // 13. Disk Space
   spinner.start('Checking disk space...');
   const diskSpace = await getDiskSpace('.');
   spinner.stop();
@@ -138,7 +165,7 @@ export async function runDoctor(ctx: AppContext): Promise<void> {
   const diskStatus = diskUsedPercent > 95 ? 'failed' : diskUsedPercent > 85 ? 'warning' : 'passed';
   results.push({ name: 'Disk Space', status: diskStatus, detail: `${formatBytes(diskSpace.free)} free of ${formatBytes(diskSpace.total)} (${diskUsedPercent.toFixed(1)}% used)`, recommendation: diskStatus !== 'passed' ? 'Low disk space - consider cleaning up' : undefined });
 
-  // 13. Memory
+  // 14. Memory
   const totalMem = totalmem();
   const freeMem = freemem();
   const usedMem = totalMem - freeMem;

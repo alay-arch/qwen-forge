@@ -8,7 +8,7 @@ import { readAnswer, confirmAction } from '../cli/input.js';
 const screen = new Screen();
 
 export const DEFAULT_CONFIG: AppConfig = {
-  version: '0.1.0-beta',
+  version: '0.1.1-beta',
   server: { port: 3030 },
   browser: { profileDir: '.browser-profile', timeout: 30000 },
   mail: { apiUrl: 'https://api.catchmail.io/api/v1', domain: 'catchmail.io', timeout: 180 },

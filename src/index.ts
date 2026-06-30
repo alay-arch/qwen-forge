@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Qwen Forge v0.1.0-beta — Minimal, professional CLI */
+/** Qwen Forge v0.1.1-beta — Minimal, professional CLI */
 
 import { Lock } from './utils/lock.js';
 import { ConfigManager } from './config/manager.js';
@@ -26,6 +26,7 @@ import { mkdir } from 'fs/promises';
 import { sleep } from './cli/helpers.js';
 import { initRuntime, isDebug } from './utils/runtime.js';
 import { saveCrashReport } from './utils/crash.js';
+import { runChromiumDiagnostic } from './diagnostics/chromium.js';
 
 let isShuttingDown = false;
 let context: AppContext | null = null;
@@ -35,7 +36,7 @@ const screen = new Screen();
 // ── Help ─────────────────────────────────────────────────────────────
 
 function printHelp(): void {
-  const v = '0.1.0-beta';
+  const v = '0.1.1-beta';
   console.log(`
  Qwen Forge v${v}
 
@@ -70,7 +71,7 @@ async function bootstrap(): Promise<void> {
     return;
   }
   if (rawArgs.includes('--version') || rawArgs.includes('-v')) {
-    console.log('0.1.0-beta');
+    console.log('0.1.1-beta');
     return;
   }
 
@@ -80,22 +81,21 @@ async function bootstrap(): Promise<void> {
     console.log(c(PALETTE.PRIMARY, '[DEBUG MODE ENABLED]'));
   }
 
+  const configManager = new ConfigManager();
+  let config = await configManager.load();
+
+  if (config.cli.firstRun) {
+    config = await firstRunWizard(configManager);
+  }
+
+  setLanguage(config.cli.language);
+
   lock = new Lock();
   const locked = await lock.acquire();
   if (!locked) {
     console.error(`\n ${c(PALETTE.ERROR, `${'✗'} ${t('errors.lock_failed')}`)}\n`);
     process.exit(1);
   }
-
-  const configManager = new ConfigManager();
-  let config = await configManager.load();
-
-  if (config.cli.firstRun) {
-    await sleep(2000);
-    config = await firstRunWizard(configManager);
-  }
-
-  setLanguage(config.cli.language);
   const logger = new Logger({
     file: config.logger.file,
     mode: 'silent',
@@ -121,6 +121,22 @@ async function bootstrap(): Promise<void> {
   if (!conn.qwen) console.error(`\n ${c(PALETTE.WARNING, `${'⚠'} ${t('connectivity.qwen_unavailable')}`)}\n`);
   if (!conn.mailApi) console.error(`\n ${c(PALETTE.WARNING, `${'⚠'} ${t('connectivity.mail_unavailable')}`)}\n`);
 
+  // Chromium runtime check
+  const chromDiag = runChromiumDiagnostic();
+  if (!chromDiag.canLaunch) {
+    if (chromDiag.launchError?.includes('error while loading shared libraries') || !chromDiag.allLibsFound) {
+      console.error(`\n ${c(PALETTE.ERROR, `${'✗'} ${t('errors.chromium_missing_libs')}`)}\n`);
+      if (chromDiag.installCmd.length > 0) {
+        console.error(` ${dim(t('errors.chromium_run_cmd'))}\n`);
+        console.error(`   ${c(PALETTE.PRIMARY, chromDiag.installCmd[0])}\n`);
+      }
+      await cleanup(); process.exit(1);
+    }
+    if (chromDiag.launchError) {
+      console.error(`\n ${c(PALETTE.WARNING, `${'⚠'} ${t('errors.chromium_not_found')}`)}\n`);
+    }
+  }
+
   // Lazy init — browser is NOT started
   const browserManager = new BrowserManager(logger, eventBus);
   await browserManager.init({
@@ -144,7 +160,11 @@ async function bootstrap(): Promise<void> {
 
   const httpServer = new Server(logger, eventBus, config.server.port, 'localhost');
   registerRoutes(httpServer, browserManager, registrationService, logoutService, config);
-  await httpServer.start();
+  try {
+    await httpServer.start();
+  } catch (err: any) {
+      console.error(`\n ${c(PALETTE.WARNING, `${'⚠'} ${t('connectivity.server_unavailable')}`)}\n`);
+  }
 
   const sessionAccountsManager = new SessionAccountsManager();
 

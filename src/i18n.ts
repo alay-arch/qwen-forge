@@ -140,6 +140,9 @@ const en: Dict = {
     no_internet: 'No internet connection',
     lock_failed: 'Application already running',
     startup_failed: 'Startup failed',
+    chromium_missing_libs: 'Chromium system libraries missing',
+    chromium_run_cmd: 'Run the following command to install:',
+    chromium_not_found: 'Chromium binary not found (cloakbrowser will download on first launch)',
   },
   messages: {
     goodbye: 'Goodbye!',
@@ -159,6 +162,7 @@ const en: Dict = {
     qwen_unavailable: 'Qwen unavailable',
     mail_unavailable: 'CatchMail unavailable',
     checking: 'Checking connectivity',
+    server_unavailable: 'HTTP server unavailable (port may be in use)',
   },
 };
 
@@ -298,6 +302,9 @@ const ru: Dict = {
     no_internet: 'Нет подключения к интернету',
     lock_failed: 'Приложение уже запущено',
     startup_failed: 'Ошибка запуска',
+    chromium_missing_libs: 'Отсутствуют системные библиотеки Chromium',
+    chromium_run_cmd: 'Выполните команду для установки:',
+    chromium_not_found: 'Chromium не найден (cloakbrowser загрузит свой при первом запуске)',
   },
   messages: {
     goodbye: 'До свидания!',
@@ -317,6 +324,7 @@ const ru: Dict = {
     qwen_unavailable: 'Qwen недоступен',
     mail_unavailable: 'CatchMail недоступен',
     checking: 'Проверка подключения',
+    server_unavailable: 'HTTP сервер недоступен (возможно, порт занят)',
   },
 };
 

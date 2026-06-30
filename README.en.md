@@ -1,6 +1,6 @@
 # Qwen Forge
 
-**v0.1.0-beta** — Automated account registration utility for Qwen (chat.qwen.ai) using disposable email via CatchMail.
+**v0.1.1-beta** — Automated account registration utility for Qwen (chat.qwen.ai) using disposable email via CatchMail.
 
 ---
 
@@ -75,6 +75,70 @@ bun link
 ```
 
 After `bun link`, the `qf` command is available in the terminal.
+
+---
+
+## Chromium Runtime Requirements
+
+Qwen Forge uses **Chromium** (via Playwright) for browser automation. Chromium requires certain system libraries.
+
+### Automatic Diagnostics
+
+On every launch, `qf` automatically checks for required libraries and verifies Chromium can start.
+
+If libraries are missing, a distro-specific install command is displayed.
+
+Diagnostics never installs packages automatically — manual installation is required.
+
+### Supported Distributions
+
+**Debian / Ubuntu:**
+```bash
+sudo apt-get update && sudo apt-get install -y libnss3 libnspr4 libatk1.0-0t64 \
+  libatk-bridge2.0-0t64 libcups2t64 libdrm2 libdbus-1-3 libasound2t64 \
+  libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
+  libpango-1.0-0 libcairo2 libexpat1 libxshmfence1 libegl1 libgles2 \
+  libopenh264-7 libfreetype6 libfontconfig1 libharfbuzz0b libglib2.0-0t64
+```
+
+**Arch Linux:**
+```bash
+sudo pacman -S --needed nss nspr atk at-spi2-atk libcups libdrm dbus alsa-lib \
+  libxkbcommon libxcomposite libxdamage libxrandr mesa pango cairo expat \
+  libxshmfence libegl libgles2 libopenh264 freetype2 fontconfig harfbuzz glib2
+```
+
+**Fedora / RHEL:**
+```bash
+sudo dnf install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-libs alsa-lib \
+  libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm pango cairo expat \
+  libxshmfence libEGL libGLESv2 openh264 freetype fontconfig harfbuzz glib2
+```
+
+**openSUSE:**
+```bash
+sudo zypper install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-1 alsa-lib \
+  libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm pango cairo expat \
+  libxshmfence libEGL1 libGLESv2 openh264 freetype2 fontconfig harfbuzz glib2
+```
+
+**Alpine Linux:**
+```bash
+sudo apk add nss nspr atk at-spi2-atk cups-libs libdrm dbus alsa-lib \
+  libxkbcommon libxcomposite libxdamage libxrandr mesa-gbm pango cairo expat \
+  libxshmfence libegl libgles2 libopenh264 freetype fontconfig harfbuzz glib
+```
+
+### What Is Checked
+
+On launch (and in the Diagnostics menu item), the system checks:
+
+1. **Distribution type** — auto-detected via `/etc/os-release`
+2. **System libraries** — 26 required Chromium libraries are verified
+3. **Chromium launch** — actual `chromium --version` execution to verify runtime
+4. **Pre-registration** — additional check before opening the browser
+
+If any check fails, a clear message with the installation command for your specific distro is displayed.
 
 ---
 
@@ -174,6 +238,7 @@ qwen-forge/
 │   ├── config/
 │   │   └── manager.ts      # Config load/save/validate
 │   ├── diagnostics/
+│   │   ├── chromium.ts     # Chromium diagnostics (libraries, runtime)
 │   │   └── doctor.ts       # System diagnostics
 │   ├── mail/
 │   │   └── service.ts      # Email (generation, polling, activation)
@@ -212,7 +277,7 @@ The `config.json` file is created automatically on first launch.
 
 ```json
 {
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "server": { "port": 3030 },
   "browser": {
     "profileDir": ".browser-profile",

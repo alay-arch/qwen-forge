@@ -9,7 +9,9 @@ set -eu
 #   2. Clones or updates the repo to ~/.qwen-forge
 #   3. Installs dependencies and runs TypeScript checks
 #   4. Symlinks qf to ~/.local/bin/qf (or $HOME/bin/qf)
-#   5. Prints next steps
+#   5. Verifies qf is actually available
+#   6. Runs Chromium dependency check
+#   7. Prints next steps
 # ──────────────────────────────────────────────────────────────────────────
 
 REPO_URL="https://github.com/alay-arch/qwen-forge.git"
@@ -25,10 +27,9 @@ ok()    { printf "\033[32m✓ %s\033[0m\n" "$*"; }
 warn()  { printf "\033[33m⚠ %s\033[0m\n" "$*"; }
 fail()  { printf "\033[31m✗ %s\033[0m\n" "$*"; exit 1; }
 cmd()   { command -v "$1" >/dev/null 2>&1; }
+header(){ printf "\n─── %s ───\n\n" "$1"; }
 
 # ─── Step 0: Check prerequisites ──────────────────────────────────────────
-
-section_header() { printf "\n─── %s ───\n\n" "$1"; }
 
 echo ""
 echo "╔══════════════════════════════════════════╗"
@@ -36,7 +37,7 @@ echo "║        Qwen Forge Installer              ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
 
-section_header "1/4  Checking prerequisites"
+header "1/5  Checking prerequisites"
 
 MISSING=""
 
@@ -75,12 +76,11 @@ fi
 
 # ─── Step 1: Clone or update repo ─────────────────────────────────────────
 
-section_header "2/4  Installing Qwen Forge"
+header "2/5  Installing Qwen Forge"
 
 if [ -d "$INSTALL_DIR" ]; then
   info "Updating existing installation at $INSTALL_DIR"
 
-  # Save current version for rollback info
   OLD_VERSION=""
   if [ -f "$INSTALL_DIR/package.json" ]; then
     OLD_VERSION=$(grep '"version"' "$INSTALL_DIR/package.json" | head -1 | sed 's/.*: *"\(.*\)".*/\1/' 2>/dev/null || true)
@@ -111,7 +111,7 @@ cd "$INSTALL_DIR"
 
 # ─── Step 2: Install dependencies ──────────────────────────────────────────
 
-section_header "3/4  Installing dependencies"
+header "3/5  Installing dependencies"
 
 info "Running bun install..."
 bun install 2>&1 | tail -3 || fail "bun install failed"
@@ -126,7 +126,7 @@ fi
 
 # ─── Step 3: Register global command ───────────────────────────────────────
 
-section_header "4/4  Registering global command"
+header "4/5  Registering global command"
 
 mkdir -p "$BIN_DIR"
 
@@ -151,22 +151,87 @@ elif [ -f "$HOME/.bash_profile" ]; then
 fi
 
 if [ -n "$SHELL_CONFIG" ]; then
-  if ! grep -q "$BIN_DIR" "$SHELL_CONFIG" 2>/dev/null; then
-    printf '\nexport PATH="$PATH:%s"\n' "$BIN_DIR" >> "$SHELL_CONFIG"
+  LINE="export PATH=\"\$PATH:$BIN_DIR\""
+  if ! grep -qF "$BIN_DIR" "$SHELL_CONFIG" 2>/dev/null; then
+    printf '\n%s\n' "$LINE" >> "$SHELL_CONFIG"
     ok "Added $BIN_DIR to PATH in $SHELL_CONFIG"
   else
+    # Check it's not duplicated
+    COUNT=$(grep -cF "$BIN_DIR" "$SHELL_CONFIG" 2>/dev/null || echo 0)
+    if [ "$COUNT" -gt 1 ]; then
+      warn "Found $COUNT duplicate PATH entries in $SHELL_CONFIG (idempotent — safe to ignore)"
+    fi
     ok "$BIN_DIR already in PATH"
   fi
 else
   warn "No shell config found. Add to PATH manually:"
-  echo "    export PATH=\"\$PATH:$BIN_DIR\""
+  echo "    export PATH=\"\$PATH:\$HOME/.local/bin\""
 fi
 
-# If .local/bin isn't in PATH right now, update PATH for this session
-case ":$PATH:" in
-  *":$BIN_DIR:"*) ;;
-  *) export PATH="$PATH:$BIN_DIR" ;;
-esac
+# Update PATH for this session so subsequent checks actually work
+export PATH="$PATH:$BIN_DIR"
+hash -r 2>/dev/null || true
+
+# ─── Step 4: Verify qf command ────────────────────────────────────────────
+
+header "5/5  Verifying installation"
+
+if command -v qf >/dev/null 2>&1; then
+  ok "qf command is available"
+  echo ""
+  info "You can now run:"
+  echo "  qf"
+  echo ""
+  info "Or use flags:"
+  echo "  qf --help     Show help"
+  echo "  qf --debug    Run with debug mode"
+  echo ""
+else
+  warn "qf is installed but not yet in PATH for this shell session."
+  echo ""
+  info "Run ONE of these to fix:"
+  echo ""
+  echo "  source $SHELL_CONFIG"
+  echo "  export PATH=\"\$PATH:\$HOME/.local/bin\""
+  echo "  hash -r"
+  echo ""
+  info "Then run:"
+  echo "  qf"
+  echo ""
+fi
+
+# ─── Step 6: Chromium diagnostics ─────────────────────────────────────────
+
+header "Chromium Runtime"
+
+if [ -f "$INSTALL_DIR/src/diagnostics/chromium.ts" ]; then
+  info "Checking Chromium system dependencies..."
+  CHROM_RESULT=$(bun run "$INSTALL_DIR/src/diagnostics/chromium.ts" 2>&1 || true)
+  LAUNCH_OK=$(echo "$CHROM_RESULT" | grep -c "Chromium launch: OK" 2>/dev/null || true)
+
+  if [ "$LAUNCH_OK" -gt 0 ]; then
+    ok "Chromium runtime OK"
+  else
+    INSTALL_CMD=$(echo "$CHROM_RESULT" | grep "^Install:" | sed 's/^Install: //' 2>/dev/null || true)
+    MISSING_COUNT=$(echo "$CHROM_RESULT" | grep -oP 'MISSING \K\d+' 2>/dev/null || true)
+
+    if [ -n "$INSTALL_CMD" ]; then
+      warn "Missing Chromium system dependencies ($MISSING_COUNT libraries)"
+      echo ""
+      info "Run the following command for your system:"
+      echo ""
+      echo "  $INSTALL_CMD"
+      echo ""
+      info "After installing, verify with:"
+      echo "  qf"
+    else
+      w="${CHROM_RESULT##*Chromium launch: }"
+      warn "Chromium runtime: ${w:-check failed}"
+    fi
+  fi
+else
+  warn "Chromium diagnostic module not available — install may be incomplete"
+fi
 
 # ─── Done ──────────────────────────────────────────────────────────────────
 
@@ -184,26 +249,4 @@ if [ -f "$INSTALL_DIR/package.json" ]; then
 fi
 info "  Location: $INSTALL_DIR"
 info "  Command:  qf"
-echo ""
-
-info "Usage:"
-echo "  qf              Start interactive menu"
-echo "  qf --debug      Run with debug logging (TRACE)"
-echo "  qf --help       Show help"
-echo ""
-
-# Verify
-if cmd "qf"; then
-  ok "qf command is available"
-  echo ""
-  info "Open a new terminal and run:"
-  echo "  qf"
-else
-  warn "qf not yet in PATH for this session"
-  echo ""
-  info "Run one of these:"
-  echo "  source $SHELL_CONFIG"
-  echo "  export PATH=\"\$PATH:$BIN_DIR\""
-  echo "  qf"
-fi
 echo ""

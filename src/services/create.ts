@@ -14,6 +14,7 @@ import { t } from '../i18n.js';
 import { generateEmail, generatePassword, waitForMail, activateAccount } from '../mail/service.js';
 import { formatTime, checkForEsc, showCancelPrompt, readKey } from '../cli/helpers.js';
 import { readAnswer } from '../cli/input.js';
+import { runChromiumDiagnostic } from '../diagnostics/chromium.js';
 
 const screen = new Screen();
 
@@ -73,7 +74,21 @@ async function recoverCleanState(page: any, qwenUrl: string, logoutService: any,
 
 export async function createAccount(ctx: AppContext): Promise<boolean> {
   const startTime = Date.now();
-  const { config, browserManager, registrationService, logoutService, accountService, sessionAccountsManager } = ctx;
+  const { config, browserManager, registrationService, logoutService, accountService, sessionAccountsManager, logger } = ctx;
+
+  // Runtime check before registration
+  const chromDiag = runChromiumDiagnostic();
+  if (!chromDiag.canLaunch) {
+    logger?.error('Chromium runtime check failed before registration');
+    if (chromDiag.installCmd.length > 0) {
+      process.stdout.write(`\n ${c(PALETTE.ERROR, `${'✗'} Missing Chromium system libraries`)}\n`);
+      process.stdout.write(` ${dim('Install them and try again:')}\n\n`);
+      process.stdout.write(`   ${c(PALETTE.PRIMARY, chromDiag.installCmd[0])}\n\n`);
+    } else {
+      process.stdout.write(`\n ${c(PALETTE.ERROR, `${'✗'} ${chromDiag.launchError || 'Chromium not available'}`)}\n\n`);
+    }
+    return false;
+  }
 
   const email = generateEmail(config.mail.domain);
   const password = generatePassword(16);

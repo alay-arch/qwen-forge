@@ -1,6 +1,6 @@
 # Qwen Forge
 
-**v0.1.0-beta** — утилита для автоматической регистрации аккаунтов на Qwen (chat.qwen.ai) через одноразовую почту CatchMail.
+**v0.1.1-beta** — утилита для автоматической регистрации аккаунтов на Qwen (chat.qwen.ai) через одноразовую почту CatchMail.
 
 ---
 
@@ -75,6 +75,70 @@ bun link
 ```
 
 После `bun link` команда `qf` будет доступна в терминале.
+
+---
+
+## Требования к Chromium
+
+Qwen Forge использует **Chromium** (через Playwright) для автоматизации регистрации. Chromium требует определённых системных библиотек.
+
+### Автоматическая диагностика
+
+При каждом запуске `qf` автоматически проверяет наличие необходимых библиотек и возможность запуска Chromium.
+
+Если библиотеки отсутствуют — будет показана команда для их установки, специфичная для вашего дистрибутива.
+
+Установка происходит только вручную — скрипт диагностики никогда не устанавливает пакеты автоматически.
+
+### Поддерживаемые дистрибутивы
+
+**Debian / Ubuntu:**
+```bash
+sudo apt-get update && sudo apt-get install -y libnss3 libnspr4 libatk1.0-0t64 \
+  libatk-bridge2.0-0t64 libcups2t64 libdrm2 libdbus-1-3 libasound2t64 \
+  libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
+  libpango-1.0-0 libcairo2 libexpat1 libxshmfence1 libegl1 libgles2 \
+  libopenh264-7 libfreetype6 libfontconfig1 libharfbuzz0b libglib2.0-0t64
+```
+
+**Arch Linux:**
+```bash
+sudo pacman -S --needed nss nspr atk at-spi2-atk libcups libdrm dbus alsa-lib \
+  libxkbcommon libxcomposite libxdamage libxrandr mesa pango cairo expat \
+  libxshmfence libegl libgles2 libopenh264 freetype2 fontconfig harfbuzz glib2
+```
+
+**Fedora / RHEL:**
+```bash
+sudo dnf install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-libs alsa-lib \
+  libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm pango cairo expat \
+  libxshmfence libEGL libGLESv2 openh264 freetype fontconfig harfbuzz glib2
+```
+
+**openSUSE:**
+```bash
+sudo zypper install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-1 alsa-lib \
+  libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm pango cairo expat \
+  libxshmfence libEGL1 libGLESv2 openh264 freetype2 fontconfig harfbuzz glib2
+```
+
+**Alpine Linux:**
+```bash
+sudo apk add nss nspr atk at-spi2-atk cups-libs libdrm dbus alsa-lib \
+  libxkbcommon libxcomposite libxdamage libxrandr mesa-gbm pango cairo expat \
+  libxshmfence libegl libgles2 libopenh264 freetype fontconfig harfbuzz glib
+```
+
+### Что проверяется
+
+При запуске (и в разделе «Диагностика» в меню) проверяется:
+
+1. **Тип дистрибутива** — определяется автоматически через `/etc/os-release`
+2. **Системные библиотеки** — проверка 26 библиотек, необходимых Chromium
+3. **Запуск Chromium** — реальный запуск `chromium --version` для проверки работоспособности
+4. **Перед регистрацией** — дополнительная проверка перед открытием браузера
+
+Если какая-либо проверка не пройдена — выводится понятное сообщение с командой для установки.
 
 ---
 
@@ -174,6 +238,7 @@ qwen-forge/
 │   ├── config/
 │   │   └── manager.ts      # Загрузка/сохранение конфигурации
 │   ├── diagnostics/
+│   │   ├── chromium.ts     # Диагностика Chromium (библиотеки, запуск)
 │   │   └── doctor.ts       # Диагностика системы
 │   ├── mail/
 │   │   └── service.ts      # Почта (генерация, получение, активация)
@@ -212,7 +277,7 @@ qwen-forge/
 
 ```json
 {
-  "version": "0.1.0-beta",
+  "version": "0.1.1-beta",
   "server": {
     "port": 3030
   },
