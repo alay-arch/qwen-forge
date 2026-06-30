@@ -14,13 +14,16 @@ SPINNER_PID=""
 SPIN_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
 
 stop_spinner() {
-    if [ -n "${SPINNER_PID:-}" ] && kill -0 "$SPINNER_PID" 2>/dev/null; then
-        kill "$SPINNER_PID" 2>/dev/null || true
-        wait "$SPINNER_PID" 2>/dev/null || true
-        # Очистка строки от остатков спиннера
-        printf '\r\033[K' >&2
+    if [ -n "${SPINNER_PID:-}" ]; then
+        # Проверяем, что процесс ещё жив, прежде чем ждать
+        if kill -0 "$SPINNER_PID" 2>/dev/null; then
+            kill "$SPINNER_PID" 2>/dev/null || true
+            wait "$SPINNER_PID" 2>/dev/null || true
+        fi
+        SPINNER_PID=""
     fi
-    SPINNER_PID=""
+    # Очистка строки от остатков спиннера
+    printf '\r\033[K' >&2
 }
 
 trap stop_spinner EXIT INT TERM
@@ -104,11 +107,11 @@ check_prerequisites() {
     spin_msg "Checking environment..."
     command -v git >/dev/null || fail "git not found"
     ok "git"
-    
+
     spin_msg "Checking environment..."
     command -v curl >/dev/null || command -v wget >/dev/null || fail "curl or wget not found"
     ok "curl/wget"
-    
+
     spin_msg "Checking environment..."
     command -v bun >/dev/null || fail "bun not found — Install: curl -fsSL https://bun.sh/install | bash"
     ok "bun"
@@ -229,7 +232,7 @@ update_shell_config() {
     local path_cmd=""
 
     case "$shell_name" in
-        zsh) 
+        zsh)
             config_files=("$HOME/.zshrc" "$HOME/.zprofile")
             path_cmd="export PATH=\"$BIN_DIR:\$PATH\""
             ;;
@@ -237,7 +240,7 @@ update_shell_config() {
             config_files=("$HOME/.config/fish/config.fish")
             path_cmd="set -gx PATH \"$BIN_DIR\" \$PATH"
             ;;
-        bash|*) 
+        bash|*)
             config_files=("$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile")
             path_cmd="export PATH=\"$BIN_DIR:\$PATH\""
             ;;
