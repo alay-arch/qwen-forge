@@ -2,9 +2,13 @@
 
 ## Requirements
 
-- **Bun** ≥ 1.3 (https://bun.sh)
-- **Git** (for installation from the repository)
-- **OS**: Linux (Windows via WSL)
+| Dependency | Minimum Version |
+|------------|----------------|
+| Bun        | ≥ 1.3          |
+| Git        | any            |
+| Chromium / Google Chrome | system package |
+
+**OS**: Linux (Windows via WSL)
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
@@ -16,21 +20,21 @@ curl -fsSL https://bun.sh/install | bash
 curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
 ```
 
-The install script:
+The install.sh script:
 1. Checks for Bun, Git, and curl/wget
 2. Clones the repository to `~/.qwen-forge`
-3. Runs `bun install`
-4. Registers the user-local `qf` command in `~/.local/bin/qf`
-5. Prepends `~/.local/bin` to PATH via your shell config
-6. Verifies that PATH resolves to the installed `qf`
-7. Runs Chromium diagnostics through a real headless launch
+3. Installs dependencies (`bun install`)
+4. Creates a `qf` symlink at `~/.local/bin/qf`
+5. Prepends `~/.local/bin` to PATH via shell configuration
+6. Verifies PATH resolution
+7. Runs Chromium diagnostics (real headless launch)
 
-Do not run the installer through `sudo`: installation is for the current user. For root-only environments, set `QWEN_FORGE_ALLOW_ROOT=1` intentionally.
+**Do not run via `sudo`** — installation is for the current user. For root environments, use `QWEN_FORGE_ALLOW_ROOT=1`.
 
-After installation, open a new terminal:
+After installation, restart your terminal:
 
 ```bash
-qf
+qf --version
 ```
 
 ## Manual installation
@@ -44,27 +48,95 @@ bun install
 Run without global registration:
 
 ```bash
-bun src/index.ts
-```
-
-Or using the entry point:
-
-```bash
 ./bin/qf
 ```
 
-Command registration through Bun:
+Or via Bun:
 
 ```bash
-bun link
+bun src/index.ts
 ```
 
-## Updates
-
-Re-run the install script:
+## Updating
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
 ```
 
-The script fetches the latest changes and resets the installed repository only when there are no local changes.
+The script performs `git fetch` and `git reset --hard` in `~/.qwen-forge` only if there are no local changes.
+
+## Uninstalling
+
+```bash
+rm -rf ~/.qwen-forge
+rm -f ~/.local/bin/qf
+```
+
+Remove the `~/.local/bin` line from your shell config (`~/.bashrc`, `~/.zshrc`, etc.) if it was added by the install script.
+
+## Supported Shells
+
+| Shell | Supported |
+|-------|-----------|
+| bash  | Yes       |
+| zsh   | Yes       |
+| fish  | Yes       |
+
+The install script automatically detects your configuration file.
+
+## PATH
+
+The `qf` command is installed in `~/.local/bin/`. This directory is prepended to PATH via the first found configuration file:
+
+- `~/.bashrc`
+- `~/.zshrc`
+- `~/.config/fish/config.fish`
+
+If PATH did not update after installation, open a new terminal or run `source ~/.bashrc` (or the corresponding file for your shell).
+
+## Installation Troubleshooting
+
+### `command not found: qf`
+
+1. Restart your terminal
+2. Verify `~/.local/bin` is in PATH: `echo $PATH`
+3. Check that the symlink exists: `ls -la ~/.local/bin/qf`
+
+### Chromium not found
+
+Install Chromium or Google Chrome:
+
+```bash
+# Debian / Ubuntu
+sudo apt install chromium-browser
+
+# Arch Linux
+sudo pacman -S chromium
+
+# Fedora
+sudo dnf install chromium
+```
+
+### Bun not found
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+### Error: Application already running
+
+The previous process did not exit. Remove the lock file:
+
+```bash
+rm -f .qwen-forge.lock
+```
+
+### Debug Mode
+
+Run with extended logging:
+
+```bash
+qf --debug
+```
+
+Logs are output to the console (TRACE level) and written to `logs/app.log`.

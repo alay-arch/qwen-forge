@@ -1,278 +1,114 @@
 # Qwen Forge
 
-**v0.1.2-beta** — утилита для автоматической регистрации аккаунтов на Qwen (chat.qwen.ai) через одноразовую почту CatchMail.
+**v0.1.3-beta** — автоматическая регистрация аккаунтов на Qwen (chat.qwen.ai) через одноразовую почту CatchMail.
 
 ---
 
 ## Возможности
 
-- Автоматическая регистрация одного или нескольких аккаунтов
+- Регистрация одного или нескольких аккаунтов (пакетный режим до 50)
 - Подтверждение email через CatchMail API
-- Автоматическая активация аккаунта по ссылке из письма
-- Пакетное создание (до 50 аккаунтов за раз)
+- Автоматическая активация по ссылке из письма
 - Полный цикл: регистрация → активация → logout → очистка состояния
 - HTTP API для интеграции с внешними скриптами
 - Диагностика системы (интернет, DNS, браузер, конфигурация)
 - Статистика по сессии и за всё время
-- Поддержка русского и английского языков
-- Graceful shutdown — корректное завершение всех процессов
+- Интерфейс на русском и английском языках
 
 ---
 
-Полная документация: [docs/](./docs/)
+## Требования
+
+| Зависимость | Версия |
+|-------------|--------|
+| Bun         | ≥ 1.3  |
+| Git         | любая  |
+| Chromium / Google Chrome | системный |
+
+**ОС**: Linux (Windows через WSL)
+
+---
 
 ## Установка
-
-### Требования
-
-- **Bun** ≥ 1.3 (https://bun.sh)
-- **Git** (для установки из репозитория)
-- **ОС**: Linux (Windows через WSL)
-
-```bash
-curl -fsSL https://bun.sh/install | bash
-```
-
-### Установка (рекомендуемый способ)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
 ```
 
-Скрипт install.sh:
-- Проверяет наличие Bun, Git и curl/wget
-- Клонирует репозиторий в `~/.qwen-forge`
-- Устанавливает зависимости
-- Регистрирует глобальную команду `qf` в `~/.local/bin/qf`
-- При повторном запуске обновляет существующую установку
+Скрипт проверяет зависимости, клонирует репозиторий в `~/.qwen-forge`, создаёт symlink `qf` в `~/.local/bin/`.
 
-После установки откройте новый терминал и выполните:
+После установки перезапустите shell или выполните:
 
 ```bash
-qf
+source ~/.bashrc
 ```
 
-### Ручная установка (альтернатива)
-
-```bash
-git clone https://github.com/alay-arch/qwen-forge.git
-cd qwen-forge
-bun install
-bun src/index.ts --help
-```
-
-Команда `qf` в этом случае не регистрируется. Используйте:
-
-```bash
-bun src/index.ts
-./bin/qf
-```
-
-Для глобальной регистрации:
-
-```bash
-bun link
-```
-
-После `bun link` команда `qf` будет доступна в терминале.
-
----
-
-## Требования к Chromium
-
-Qwen Forge использует **Chromium** через CloakBrowser и Playwright для автоматизации регистрации.
-
-### Автоматическая диагностика
-
-При запуске `qf` диагностика сначала ищет бинарник Chromium, который будет использовать CloakBrowser, затем выполняет реальный минимальный headless-запуск.
-
-Если Chromium запускается успешно, диагностика считается успешной даже при несовпадениях в отдельных системных проверках. Это исключает ложные ошибки на Arch, Debian и Ubuntu.
-
-Если Chromium не запускается, stderr анализируется на конкретную причину: отсутствующий бинарник, права запуска, ошибка загрузки shared library или другая ошибка. Команда установки показывается только после такого анализа.
-
-Установка происходит только вручную — скрипт диагностики никогда не устанавливает пакеты автоматически.
-
-### Поддерживаемые дистрибутивы диагностики
-
-Диагностика определяет Linux-дистрибутив через `/etc/os-release` и подбирает команды для Debian 12, Debian 13, Ubuntu LTS, Arch Linux, Fedora, RHEL, openSUSE, Alpine, Void и Gentoo.
-
-Не используйте команды ниже как обязательный preinstall-чеклист. Они приведены как справка; `qf` сам покажет минимальную команду только при реальном отказе запуска Chromium.
-
-**Debian / Ubuntu:**
-```bash
-# Debian 12 пример: libcups2, libasound2, libglib2.0-0
-# Debian 13 / Ubuntu 24.04 пример: libcups2t64, libasound2t64, libglib2.0-0t64
-sudo apt-get update && sudo apt-get install -y <пакет-из-диагностики>
-```
-
-**Arch Linux:**
-```bash
-sudo pacman -S --needed nss nspr at-spi2-core libcups libdrm dbus alsa-lib \
-  libxkbcommon libxcomposite libxdamage libxrandr mesa pango cairo expat \
-  libxshmfence libglvnd libopenh264 freetype2 fontconfig harfbuzz glib2
-```
-
-**Fedora / RHEL:**
-```bash
-sudo dnf install -y nss nspr atk at-spi2-atk cups-libs libdrm dbus-libs alsa-lib \
-  libxkbcommon libXcomposite libXdamage libXrandr mesa-libgbm pango cairo expat \
-  libxshmfence libEGL libGLESv2 openh264 freetype fontconfig harfbuzz glib2
-```
-
-**openSUSE:**
-```bash
-sudo zypper --non-interactive install nss nspr atk at-spi2-atk cups-libs libdrm dbus-1 alsa-lib \
-  libxkbcommon libXcomposite libXdamage libXrandr Mesa-libgbm1 pango cairo expat \
-  libxshmfence Mesa-libEGL1 Mesa-libGLESv2-2 openh264 freetype2 fontconfig harfbuzz glib2
-```
-
-**Alpine Linux:**
-```bash
-sudo apk add nss nspr atk at-spi2-atk cups-libs libdrm dbus alsa-lib \
-  libxkbcommon libxcomposite libxdamage libxrandr mesa-gbm pango cairo expat \
-  libxshmfence libegl libgles2 libopenh264 freetype fontconfig harfbuzz glib
-```
-
-### Что проверяется
-
-При запуске (и в разделе «Диагностика» в меню) проверяется:
-
-1. **Тип дистрибутива** — определяется автоматически через `/etc/os-release`
-2. **Бинарник Chromium** — `CLOAKBROWSER_BINARY_PATH`, кэш `~/.cloakbrowser/chromium-*`, затем системные пути
-3. **Запуск Chromium** — реальный headless-запуск `about:blank` с безопасными флагами проекта
-4. **Причина отказа** — stderr анализируется только если запуск не удался
-5. **Перед регистрацией** — дополнительная проверка перед открытием браузера
-
-Если какая-либо проверка не пройдена — выводится понятное сообщение с командой для установки.
+Полная документация по установке: [docs/installation.md](./docs/installation.md)
 
 ---
 
 ## Быстрый старт
 
 ```bash
-# Запустить интерактивное меню
 qf
-
-# Создать один аккаунт — выбрать пункт 1
-# Пакетное создание — выбрать пункт 2 и ввести количество
 ```
 
-При первом запуске будет предложено выбрать язык. Конфигурация сохраняется в `config.json`.
-
----
-
-## Использование
-
-### qf
-
-Запускает интерактивное меню:
+Запустится интерактивное меню:
 
 ```
 1  Создать аккаунт
 2  Пакетное создание
-3  Сессия
+3  Аккаунты сессии
 4  Статистика
 5  Диагностика
 6  Конфигурация
 0  Выход
 ```
 
-**Создание аккаунта (1):**
-1. Указывается email и пароль
-2. Открывается браузер и заполняется форма регистрации на Qwen
-3. После отправки формы ожидается подтверждение от пользователя
-4. Система ожидает письмо на CatchMail и извлекает ссылку активации
-5. Выполняется активация аккаунта
-6. Выполняется logout и очистка состояния браузера
-7. После успешной регистрации приложение завершает работу
+---
 
-**Пакетное создание (2):**
-- Введите количество аккаунтов (1–50)
-- Между аккаунтами есть пауза 3 секунды с возможностью отмены (ESC)
-- После завершения показывается сводка
+## CLI
 
-### qf --debug
+| Команда | Описание |
+|---------|----------|
+| `qf` | Интерактивное меню |
+| `qf --debug` | Режим отладки (TRACE, вывод в консоль) |
+| `qf --help`, `-h` | Справка |
+| `qf --version`, `-v` | Версия |
 
-Запуск с расширенным логированием.
+---
 
-Режим `TRACE` включает:
-- Логи всех HTTP-запросов
-- Результаты polling'а почты
-- Тайминги операций
-- Информацию об отправке форм
-- Вывод логов в консоль в реальном времени
+## HTTP API
 
-Используется для диагностики проблем.
+Сервер запускается автоматически при старте приложения.
+
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET | `/api/ping` | Проверка работоспособности |
+| POST | `/api/register` | Регистрация аккаунта |
+| POST | `/api/logout` | Выход и очистка сессии |
+
+Порт по умолчанию: `3030`. Настраивается в `config.json`.
 
 ```bash
-qf --debug
+curl http://localhost:3030/api/ping
 ```
-
-Лог-файл: `logs/app.log`
 
 ---
 
-## Как работает проект
+## Диагностика
 
-1. **Браузер** запускается один раз при первом обращении (lazy init)
-2. Для регистрации создаётся отдельная страница, браузер запускается лениво и защищён от параллельного двойного старта
-3. После регистрации ожидается письмо на CatchMail
-4. Из письма извлекается ссылка активации
-5. После активации выполняется logout через `GET /api/v2/auths/signout`
-6. Очищаются cookies, localStorage, sessionStorage
-7. Браузер возвращается на страницу `/auth?mode=register`
-8. После успешной регистрации приложение корректно завершает работу
+Встроенная диагностика (пункт меню 5) проверяет:
 
----
+- Интернет-соединение и DNS
+- Доступность chat.qwen.ai и CatchMail API
+- Валидность конфигурации
+- Директорию хранилища и профиль браузера
+- Статус HTTP-сервера и браузера
+- Свободное место и память
+- Системный Chromium (бинарник, разделяемые библиотеки, дистрибутив)
 
-## Структура проекта
-
-```
-qwen-forge/
-├── bin/qf                  # CLI точка входа
-├── src/
-│   ├── index.ts            # Точка входа, CLI loop, bootstrap
-│   ├── types.ts            # Типы TypeScript
-│   ├── i18n.ts             # Переводы (RU/EN)
-│   ├── theme.ts            # Терминальные цвета
-│   ├── browser/
-│   │   └── manager.ts      # Управление браузером
-│   ├── cli/
-│   │   ├── input.ts        # Ввод с клавиатуры, меню
-│   │   └── helpers.ts      # sleep, ESC-ожидание
-│   ├── config/
-│   │   └── manager.ts      # Загрузка/сохранение конфигурации
-│   ├── diagnostics/
-│   │   ├── chromium.ts     # Диагностика Chromium (реальный запуск, stderr-анализ)
-│   │   └── doctor.ts       # Диагностика системы
-│   ├── mail/
-│   │   └── service.ts      # Почта (генерация, получение, активация)
-│   ├── server/
-│   │   └── http.ts         # HTTP API сервер
-│   ├── services/
-│   │   ├── account.ts      # CRUD аккаунтов
-│   │   ├── batch.ts        # Пакетное создание
-│   │   ├── create.ts       # Создание одного аккаунта
-│   │   ├── logout.ts       # Logout + очистка
-│   │   ├── registration.ts # Заполнение формы регистрации
-│   │   ├── session.ts      # Сессионный менеджер
-│   │   └── stats.ts        # Статистика
-│   ├── storage/
-│   │   └── json.ts         # JSON-хранилище
-│   └── utils/
-│       ├── crash.ts        # Crash reports
-│       ├── eventbus.ts     # Шина событий
-│       ├── lock.ts         # Блокировка процесса
-│       ├── logger.ts       # Логирование
-│       ├── network.ts      # Проверка сети
-│       ├── runtime.ts      # CLI флаги
-│       └── sanitizer.ts    # Санитайзер логов
-├── data/
-│   └── accounts.json       # База аккаунтов
-├── config.json             # Runtime-конфигурация, создаётся локально и не коммитится
-├── package.json
-└── tsconfig.json
-```
+Расширенное логирование: `qf --debug`
 
 ---
 
@@ -280,149 +116,97 @@ qwen-forge/
 
 Файл `config.json` создаётся автоматически при первом запуске.
 
-```json
-{
-  "version": "0.1.2-beta",
-  "server": {
-    "port": 3030
-  },
-  "browser": {
-    "profileDir": ".browser-profile",
-    "timeout": 30000
-  },
-  "mail": {
-    "apiUrl": "https://api.catchmail.io/api/v1",
-    "domain": "catchmail.io",
-    "timeout": 180
-  },
-  "qwen": {
-    "baseUrl": "https://chat.qwen.ai"
-  },
-  "storage": {
-    "dir": "data"
-  },
-  "logger": {
-    "file": "logs/app.log"
-  },
-  "cli": {
-    "language": "ru",
-    "firstRun": false
-  }
-}
-```
-
-**server.port** — порт HTTP API (по умолчанию 3030)
-**browser.profileDir** — директория профиля Chromium
-**browser.timeout** — таймаут операций браузера (мс)
-**mail.apiUrl** — URL API одноразовой почты
-**mail.domain** — домен для генерации email
-**mail.timeout** — таймаут ожидания письма (с)
-**qwen.baseUrl** — базовый URL Qwen
-**storage.dir** — директория для хранения данных
-**logger.file** — путь к лог-файлу
-**cli.language** — язык интерфейса (`ru` | `en`)
+| Параметр | По умолчанию | Описание |
+|----------|-------------|----------|
+| `server.port` | `3030` | Порт HTTP API |
+| `browser.profileDir` | `.browser-profile` | Директория профиля браузера |
+| `browser.timeout` | `30000` | Таймаут операций браузера (мс) |
+| `mail.apiUrl` | `https://api.catchmail.io/api/v1` | URL API почтового сервиса |
+| `mail.domain` | `catchmail.io` | Домен для генерации email |
+| `mail.timeout` | `180` | Таймаут ожидания письма (с) |
+| `qwen.baseUrl` | `https://chat.qwen.ai` | Базовый URL Qwen |
+| `storage.dir` | `data` | Директория хранилища аккаунтов |
+| `logger.file` | `logs/app.log` | Файл логов |
+| `cli.language` | `ru` | Язык интерфейса (`ru` / `en`) |
 
 ---
 
-## Логирование
-
-Логи пишутся в файл, указанный в `logger.file` (по умолчанию `logs/app.log`).
-
-- **INFO** — основные события (запуск, создание аккаунта, ошибки)
-- **DEBUG** — детальные логи операций
-- **TRACE** — только в режиме `--debug`
-
-В режиме `--debug` логи также выводятся в консоль с цветовой разметкой.
-
-Ротация: при достижении 10MB создаётся `app.log.1`, старые файлы удаляются.
-
----
-
-## Возможные ошибки
-
-| Ошибка | Причина | Решение |
-|--------|---------|---------|
-| `Application already running` | Предыдущий процесс не завершён | Дождаться завершения или удалить lock-файл |
-| `No internet connection` | Нет доступа к сети | Проверить интернет |
-| `Failed to submit form` | Не удалось отправить форму (возможно, изменилась структура Qwen) | Проверить вручную в браузере |
-| `Email not received` | Письмо не пришло в течение таймаута | Проверить CatchMail, увеличить mail.timeout |
-| `Activation failed` | Не удалось активировать аккаунт | Проверить ссылку активации вручную |
-| `Logout failed` | Не удалось очистить сессию | Запустить повторно — logout выполнится автоматически |
-| `Form not visible` | Не отображается форма регистрации | Проверить, не заблокирован ли доступ к Qwen |
-
----
-
-## FAQ
-
-**Q: Можно ли использовать другой почтовый сервис?**
-A: Да, измените `mail.apiUrl` и `mail.domain` в `config.json`.
-
-**Q: Браузер открывается при каждом запуске?**
-A: Нет, браузер запускается один раз (lazy init) при первой операции.
-
-**Q: Сколько аккаунтов можно создать?**
-A: Ограничений нет. В пакетном режиме до 50 за раз.
-
-**Q: Как остановить процесс?**
-A: ESC в режимах ожидания или Ctrl+C для полной остановки.
-
----
-
-## Для разработчиков
-
-### HTTP API
-
-```
-GET  /api/ping          — проверка работоспособности
-POST /api/register      — регистрация аккаунта
-POST /api/logout        — выход и очистка сессии
-```
-
-Пример:
+## Обновление
 
 ```bash
-curl -X POST http://localhost:9412/api/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@catchmail.io","password":"MyPass123!"}'
+curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
 ```
 
-### Сборка и проверка
+Скрипт обновит существующую установку через `git pull`.
 
-```bash
-bun install
-bun run typecheck   # TypeScript проверка
-bun run lint        # Линтинг
-bun run dev         # Режим разработки с автоперезагрузкой
+---
+
+## Структура проекта
+
+```
+qwen-forge/
+├── bin/qf                  # Entry point (bash wrapper)
+├── install.sh              # Установщик
+├── config.json             # Конфигурация (создаётся автоматически)
+├── src/
+│   ├── index.ts            # Точка входа, bootstrap
+│   ├── context.ts          # AppContext (разрыв циклической зависимости)
+│   ├── types.ts            # Все типы и интерфейсы
+│   ├── i18n.ts             # Переводы EN/RU
+│   ├── theme.ts            # UI: цвета, Spinner, Screen
+│   ├── version.ts          # Константа версии
+│   ├── browser/manager.ts  # Единственный владелец браузера
+│   ├── cli/                # Ввод, меню, хелперы
+│   ├── config/manager.ts   # Загрузка/сохранение конфигурации
+│   ├── diagnostics/        # Chromium-диагностика, doctor
+│   ├── mail/service.ts     # CatchMail: email, пароль, активация
+│   ├── server/http.ts      # HTTP API (Bun.serve)
+│   ├── services/           # Бизнес-логика (регистрация, batch, logout)
+│   ├── storage/json.ts     # JSON-хранилище с атомарной записью
+│   └── utils/              # Logger, Lock, EventBus, Network, Crash, Sanitizer
+├── data/                   # Хранилище аккаунтов (accounts.json)
+├── logs/                   # Логи приложения
+└── docs/                   # Документация
 ```
 
 ---
 
-## Архитектура
+## Поддерживаемые ОС
 
-Приложение построено на трёх принципах:
+| Дистрибутив | Статус |
+|-------------|--------|
+| Debian 12 | Тестировано |
+| Debian 13 | Тестировано |
+| Arch Linux | Тестировано |
+| Ubuntu | Ожидается работа, не тестировано |
+| Fedora | Ожидается работа, не тестировано |
+| openSUSE | Ожидается работа, не тестировано |
+| Alpine | Ожидается работа, не тестировано |
+| Void Linux | Ожидается работа, не тестировано |
+| Gentoo | Ожидается работа, не тестировано |
+| Linux Mint | Ожидается работа, не тестировано |
+| Pop!_OS | Ожидается работа, не тестировано |
+| Rocky Linux | Ожидается работа, не тестировано |
+| AlmaLinux | Ожидается работа, не тестировано |
 
-1. **Единый источник правды для браузера** — `BrowserManager` единственный владелец browser/context/page. Никто другой не вызывает `close()`, `newPage()`, `clearCookies()`. Все операции — через `getSharedPage()` или `createPage()`.
+Тестирование проводилось в Docker-контейнерах.
 
-2. **Гарантированная очистка** — после ЛЮБОГО завершения регистрации (успех, ошибка, отмена, таймаут) выполняется logout и очистка состояния. Следующий цикл всегда начинается с чистой страницы `/auth?mode=register`.
+---
 
-3. **Graceful shutdown** — при успешной регистрации или выходе из меню все ресурсы освобождаются: HTTP-сервер, браузер, файловое хранилище, блокировка процесса. `process.exit()` не используется в штатном режиме.
+## Документация
 
-### Жизненный цикл
+- [Установка](./docs/installation.md)
+- [CLI и HTTP API](./docs/cli.md)
+- [Конфигурация](./docs/configuration.md)
+- [Решение проблем](./docs/troubleshooting.md)
+- [Разработка](./docs/development.md)
+- [Участие](./docs/contributing.md)
 
-```
-bootstrap → cliLoop → createAccount
-                         ├── ensureCleanState
-                         ├── register
-                         ├── confirm
-                         ├── waitForMail
-                         ├── activate
-                         └── [finally] cleanup logout
-                      → shutdown (если успешно)
-```
+---
 
-### Выбор `waitUntil: 'domcontentloaded'`
+## Участие
 
-Для навигации используется `domcontentloaded`, а не `networkidle`. Причина: Qwen поддерживает WebSocket-соединение постоянно. `networkidle` никогда не наступит и вызовет таймаут. `domcontentloaded` + `waitForSelector` — единственный надёжный паттерн для этого сайта.
+Баги — через [Issues](https://github.com/alay-arch/qwen-forge/issues). Предложения — через Pull Requests. Подробности: [docs/contributing.md](./docs/contributing.md)
 
 ---
 

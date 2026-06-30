@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Qwen Forge v0.1.2-beta — Minimal, professional CLI */
+/** Qwen Forge v0.1.3-beta — Minimal, professional CLI */
 
 import { Lock } from './utils/lock.js';
 import { ConfigManager } from './config/manager.js';

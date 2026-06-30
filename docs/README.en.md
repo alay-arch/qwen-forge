@@ -1,6 +1,6 @@
 # Qwen Forge Documentation
 
-**v0.1.2-beta**
+**v0.1.3-beta**
 
 ---
 
