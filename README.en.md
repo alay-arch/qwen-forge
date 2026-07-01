@@ -1,33 +1,17 @@
 # Qwen Forge
 
-**v0.1.3-beta** — Automated account registration for Qwen (chat.qwen.ai) using disposable email via CatchMail.
+**v0.1.3-beta**
 
----
+Automated Qwen (chat.qwen.ai) account registration via disposable email.
 
-## Features
+## What is this
 
-- Single or batch account registration (up to 50)
-- Email confirmation via CatchMail API
-- Automatic account activation from email link
-- Full cycle: register → activate → logout → state cleanup
-- HTTP API for external script integration
-- System diagnostics (network, DNS, browser, configuration)
-- Session and historical statistics
-- Russian and English interface
+Qwen Forge registers accounts on chat.qwen.ai automatically. Creates temporary email, fills the form, confirms registration, saves credentials.
 
----
-
-## Requirements
-
-| Dependency | Version |
-|------------|---------|
-| Bun        | ≥ 1.3   |
-| Git        | any     |
-| Chromium / Google Chrome | system package |
-
-**OS**: Linux (Windows via WSL)
-
----
+**Why:**
+- Need an account for testing
+- Bulk registration for a team
+- Automation without manual input
 
 ## Installation
 
@@ -35,180 +19,145 @@
 curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
 ```
 
-The script checks dependencies, clones the repository to `~/.qwen-forge`, and creates a `qf` symlink in `~/.local/bin/`.
+The script checks dependencies (Bun, Git, Chromium), installs to `~/.qwen-forge`, and creates the `qf` command.
 
-After installation, restart your shell or run:
-
+After installation:
 ```bash
 source ~/.bashrc
+qf --version
 ```
 
-Full installation docs: [docs/installation.en.md](./docs/installation.en.md)
+## Usage
 
----
-
-## Quick Start
-
+Launch interactive menu:
 ```bash
 qf
 ```
 
-This launches the interactive menu:
-
+Select an action:
 ```
 1  Create account
-2  Batch
+2  Batch create
 3  Session
 4  Statistics
 5  Diagnostics
-6  Configuration
+6  Settings
 0  Exit
 ```
 
----
+### Examples
 
-## CLI
+**Create one account:**
+```bash
+qf
+# Select "1" → follow prompts
+```
 
-| Command | Description |
-|---------|-------------|
-| `qf` | Interactive menu |
-| `qf --debug` | Debug mode (TRACE, console output) |
-| `qf --help`, `-h` | Show help |
-| `qf --version`, `-v` | Show version |
+**Create 10 accounts:**
+```bash
+qf
+# Select "2" → enter "10"
+```
 
----
+**Check system:**
+```bash
+qf
+# Select "5" → diagnostics shows issues
+```
 
 ## HTTP API
 
-The server starts automatically when the application launches.
+Server starts automatically on `localhost:3030`.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/ping` | Health check |
-| POST | `/api/register` | Register an account |
-| POST | `/api/logout` | Logout and session cleanup |
-
-Default port: `3030`. Configurable in `config.json`.
-
+**Health check:**
 ```bash
 curl http://localhost:3030/api/ping
 ```
 
----
+**Create account:**
+```bash
+curl -X POST http://localhost:3030/api/register
+```
 
-## Diagnostics
-
-Built-in diagnostics (menu item 5) checks:
-
-- Internet connection and DNS
-- chat.qwen.ai and CatchMail API availability
-- Configuration validity
-- Storage directory and browser profile
-- HTTP server and browser status
-- Disk space and memory
-- System Chromium (binary, shared libraries, distro)
-
-Extended logging: `qf --debug`
-
----
+**Logout:**
+```bash
+curl -X POST http://localhost:3030/api/logout
+```
 
 ## Configuration
 
-`config.json` is created automatically on first run.
+Settings in `config.json`:
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `server.port` | `3030` | HTTP API port |
-| `browser.profileDir` | `.browser-profile` | Browser profile directory |
-| `browser.timeout` | `30000` | Browser operation timeout (ms) |
-| `mail.apiUrl` | `https://api.catchmail.io/api/v1` | Mail service API URL |
-| `mail.domain` | `catchmail.io` | Domain for email generation |
-| `mail.timeout` | `180` | Email wait timeout (s) |
-| `qwen.baseUrl` | `https://chat.qwen.ai` | Qwen base URL |
-| `storage.dir` | `data` | Account storage directory |
-| `logger.file` | `logs/app.log` | Log file path |
-| `cli.language` | `ru` | Interface language (`ru` / `en`) |
+```json
+{
+  "version": "0.1.3-beta",
+  "server": { "port": 3030 },
+  "browser": { "profileDir": ".browser-profile", "timeout": 30000 },
+  "mail": { "apiUrl": "https://api.catchmail.io/api/v1", "domain": "catchmail.io" },
+  "cli": { "language": "en" }
+}
+```
 
----
+**Parameters:**
+- `server.port` — HTTP API port
+- `browser.timeout` — operation timeout (ms)
+- `cli.language` — interface language (`ru` or `en`)
 
-## Updating
+## Common issues
 
+### `Chromium not found`
+Install Chromium:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
+# Debian/Ubuntu
+sudo apt install chromium-browser
+
+# Arch
+sudo pacman -S chromium
 ```
 
-The script updates the existing installation via `git pull`.
+### `Missing shared libraries`
+Install dependencies:
+```bash
+# Debian/Ubuntu
+sudo apt install libnss3 libatk-bridge2.0-0 libdrm2 libgbm1
 
----
-
-## Project Structure
-
-```
-qwen-forge/
-├── bin/qf                  # Entry point (bash wrapper)
-├── install.sh              # Installer
-├── config.json             # Configuration (auto-generated)
-├── src/
-│   ├── index.ts            # Entry point, bootstrap
-│   ├── context.ts          # AppContext (circular dependency break)
-│   ├── types.ts            # All types and interfaces
-│   ├── i18n.ts             # EN/RU translations
-│   ├── theme.ts            # UI: colors, Spinner, Screen
-│   ├── version.ts          # Version constant
-│   ├── browser/manager.ts  # Sole browser lifecycle owner
-│   ├── cli/                # Input, menu, helpers
-│   ├── config/manager.ts   # Config load/save
-│   ├── diagnostics/        # Chromium diagnostics, doctor
-│   ├── mail/service.ts     # CatchMail: email, password, activation
-│   ├── server/http.ts      # HTTP API (Bun.serve)
-│   ├── services/           # Business logic (registration, batch, logout)
-│   ├── storage/json.ts     # JSON storage with atomic writes
-│   └── utils/              # Logger, Lock, EventBus, Network, Crash, Sanitizer
-├── data/                   # Account storage (accounts.json)
-├── logs/                   # Application logs
-└── docs/                   # Documentation
+# Arch
+sudo pacman -S nss atk at-spi2-atk libdrm mesa
 ```
 
----
+### `Registration failed`
+- Check internet connection
+- Run diagnostics: `qf` → option 5
+- Try later (Qwen may have limits)
 
-## Supported Operating Systems
+### `No confirmation email`
+- Wait 2-3 minutes
+- Check logs: `logs/app.log`
+- Run with `--debug` for detailed diagnostics
 
-| Distribution | Status |
-|--------------|--------|
-| Debian 12 | Tested |
-| Debian 13 | Tested |
-| Arch Linux | Tested |
-| Ubuntu | Expected to work, not officially tested |
-| Fedora | Expected to work, not officially tested |
-| openSUSE | Expected to work, not officially tested |
-| Alpine | Expected to work, not officially tested |
-| Void Linux | Expected to work, not officially tested |
-| Gentoo | Expected to work, not officially tested |
-| Linux Mint | Expected to work, not officially tested |
-| Pop!_OS | Expected to work, not officially tested |
-| Rocky Linux | Expected to work, not officially tested |
-| AlmaLinux | Expected to work, not officially tested |
+## Debug
 
-Testing was performed inside Docker containers.
+Detailed logs:
+```bash
+qf --debug
+```
 
----
+Logs saved to `logs/app.log`. Crashes go to `logs/crash-*.log`.
+
+## Requirements
+
+- **Bun** ≥ 1.3
+- **Git** — any version
+- **Chromium** or **Google Chrome** — system package
+- **OS**: Linux (Windows via WSL)
 
 ## Documentation
 
-- [Installation](./docs/installation.en.md)
-- [CLI and HTTP API](./docs/cli.en.md)
-- [Configuration](./docs/configuration.en.md)
-- [Troubleshooting](./docs/troubleshooting.en.md)
-- [Development](./docs/development.en.md)
-- [Contributing](./docs/contributing.en.md)
-
----
-
-## Contributing
-
-Report bugs via [Issues](https://github.com/alay-arch/qwen-forge/issues). Submit improvements via Pull Requests. See [docs/contributing.en.md](./docs/contributing.en.md).
-
----
+- [Installation](docs/installation.en.md)
+- [CLI](docs/cli.en.md)
+- [Configuration](docs/configuration.en.md)
+- [Troubleshooting](docs/troubleshooting.en.md)
+- [Development](docs/development.en.md)
 
 ## License
 

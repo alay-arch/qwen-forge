@@ -1,33 +1,17 @@
 # Qwen Forge
 
-**v0.1.3-beta** — автоматическая регистрация аккаунтов на Qwen (chat.qwen.ai) через одноразовую почту CatchMail.
+**v0.1.3-beta**
 
----
+Автоматическая регистрация аккаунтов Qwen (chat.qwen.ai) через одноразовую почту.
 
-## Возможности
+## Что это
 
-- Регистрация одного или нескольких аккаунтов (пакетный режим до 50)
-- Подтверждение email через CatchMail API
-- Автоматическая активация по ссылке из письма
-- Полный цикл: регистрация → активация → logout → очистка состояния
-- HTTP API для интеграции с внешними скриптами
-- Диагностика системы (интернет, DNS, браузер, конфигурация)
-- Статистика по сессии и за всё время
-- Интерфейс на русском и английском языках
+Qwen Forge регистрирует аккаунты на chat.qwen.ai без ручного ввода. Создаёт временный email, заполняет форму, подтверждает регистрацию, сохраняет данные.
 
----
-
-## Требования
-
-| Зависимость | Версия |
-|-------------|--------|
-| Bun         | ≥ 1.3  |
-| Git         | любая  |
-| Chromium / Google Chrome | системный |
-
-**ОС**: Linux (Windows через WSL)
-
----
+**Зачем:**
+- Нужен аккаунт для тестирования
+- Массовая регистрация для команды
+- Автоматизация без ручного ввода
 
 ## Установка
 
@@ -35,180 +19,145 @@
 curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
 ```
 
-Скрипт проверяет зависимости, клонирует репозиторий в `~/.qwen-forge`, создаёт symlink `qf` в `~/.local/bin/`.
+Скрипт проверит зависимости (Bun, Git, Chromium), установит проект в `~/.qwen-forge` и создаст команду `qf`.
 
-После установки перезапустите shell или выполните:
-
+После установки:
 ```bash
 source ~/.bashrc
+qf --version
 ```
 
-Полная документация по установке: [docs/installation.md](./docs/installation.md)
+## Использование
 
----
-
-## Быстрый старт
-
+Запусти интерактивное меню:
 ```bash
 qf
 ```
 
-Запустится интерактивное меню:
-
+Выбери действие:
 ```
 1  Создать аккаунт
 2  Пакетное создание
-3  Аккаунты сессии
+3  Сессия
 4  Статистика
 5  Диагностика
-6  Конфигурация
+6  Настройки
 0  Выход
 ```
 
----
+### Примеры
 
-## CLI
+**Создать один аккаунт:**
+```bash
+qf
+# Выбери "1" → следуй инструкциям
+```
 
-| Команда | Описание |
-|---------|----------|
-| `qf` | Интерактивное меню |
-| `qf --debug` | Режим отладки (TRACE, вывод в консоль) |
-| `qf --help`, `-h` | Справка |
-| `qf --version`, `-v` | Версия |
+**Создать 10 аккаунтов:**
+```bash
+qf
+# Выбери "2" → введи "10"
+```
 
----
+**Проверить систему:**
+```bash
+qf
+# Выбери "5" → диагностика покажет проблемы
+```
 
 ## HTTP API
 
-Сервер запускается автоматически при старте приложения.
+Сервер запускается автоматически на `localhost:3030`.
 
-| Метод | Путь | Описание |
-|-------|------|----------|
-| GET | `/api/ping` | Проверка работоспособности |
-| POST | `/api/register` | Регистрация аккаунта |
-| POST | `/api/logout` | Выход и очистка сессии |
-
-Порт по умолчанию: `3030`. Настраивается в `config.json`.
-
+**Проверка:**
 ```bash
 curl http://localhost:3030/api/ping
 ```
 
----
+**Создать аккаунт:**
+```bash
+curl -X POST http://localhost:3030/api/register
+```
 
-## Диагностика
-
-Встроенная диагностика (пункт меню 5) проверяет:
-
-- Интернет-соединение и DNS
-- Доступность chat.qwen.ai и CatchMail API
-- Валидность конфигурации
-- Директорию хранилища и профиль браузера
-- Статус HTTP-сервера и браузера
-- Свободное место и память
-- Системный Chromium (бинарник, разделяемые библиотеки, дистрибутив)
-
-Расширенное логирование: `qf --debug`
-
----
+**Выйти:**
+```bash
+curl -X POST http://localhost:3030/api/logout
+```
 
 ## Конфигурация
 
-Файл `config.json` создаётся автоматически при первом запуске.
+Настройки в `config.json`:
 
-| Параметр | По умолчанию | Описание |
-|----------|-------------|----------|
-| `server.port` | `3030` | Порт HTTP API |
-| `browser.profileDir` | `.browser-profile` | Директория профиля браузера |
-| `browser.timeout` | `30000` | Таймаут операций браузера (мс) |
-| `mail.apiUrl` | `https://api.catchmail.io/api/v1` | URL API почтового сервиса |
-| `mail.domain` | `catchmail.io` | Домен для генерации email |
-| `mail.timeout` | `180` | Таймаут ожидания письма (с) |
-| `qwen.baseUrl` | `https://chat.qwen.ai` | Базовый URL Qwen |
-| `storage.dir` | `data` | Директория хранилища аккаунтов |
-| `logger.file` | `logs/app.log` | Файл логов |
-| `cli.language` | `ru` | Язык интерфейса (`ru` / `en`) |
+```json
+{
+  "version": "0.1.3-beta",
+  "server": { "port": 3030 },
+  "browser": { "profileDir": ".browser-profile", "timeout": 30000 },
+  "mail": { "apiUrl": "https://api.catchmail.io/api/v1", "domain": "catchmail.io" },
+  "cli": { "language": "ru" }
+}
+```
 
----
+**Параметры:**
+- `server.port` — порт HTTP API
+- `browser.timeout` — таймаут операций (мс)
+- `cli.language` — язык интерфейса (`ru` или `en`)
 
-## Обновление
+## Типичные проблемы
 
+### `Chromium not found`
+Установи Chromium:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
+# Debian/Ubuntu
+sudo apt install chromium-browser
+
+# Arch
+sudo pacman -S chromium
 ```
 
-Скрипт обновит существующую установку через `git pull`.
+### `Missing shared libraries`
+Установи зависимости:
+```bash
+# Debian/Ubuntu
+sudo apt install libnss3 libatk-bridge2.0-0 libdrm2 libgbm1
 
----
-
-## Структура проекта
-
-```
-qwen-forge/
-├── bin/qf                  # Entry point (bash wrapper)
-├── install.sh              # Установщик
-├── config.json             # Конфигурация (создаётся автоматически)
-├── src/
-│   ├── index.ts            # Точка входа, bootstrap
-│   ├── context.ts          # AppContext (разрыв циклической зависимости)
-│   ├── types.ts            # Все типы и интерфейсы
-│   ├── i18n.ts             # Переводы EN/RU
-│   ├── theme.ts            # UI: цвета, Spinner, Screen
-│   ├── version.ts          # Константа версии
-│   ├── browser/manager.ts  # Единственный владелец браузера
-│   ├── cli/                # Ввод, меню, хелперы
-│   ├── config/manager.ts   # Загрузка/сохранение конфигурации
-│   ├── diagnostics/        # Chromium-диагностика, doctor
-│   ├── mail/service.ts     # CatchMail: email, пароль, активация
-│   ├── server/http.ts      # HTTP API (Bun.serve)
-│   ├── services/           # Бизнес-логика (регистрация, batch, logout)
-│   ├── storage/json.ts     # JSON-хранилище с атомарной записью
-│   └── utils/              # Logger, Lock, EventBus, Network, Crash, Sanitizer
-├── data/                   # Хранилище аккаунтов (accounts.json)
-├── logs/                   # Логи приложения
-└── docs/                   # Документация
+# Arch
+sudo pacman -S nss atk at-spi2-atk libdrm mesa
 ```
 
----
+### `Registration failed`
+- Проверь интернет
+- Запусти диагностику: `qf` → пункт 5
+- Попробуй позже (возможны лимиты Qwen)
 
-## Поддерживаемые ОС
+### `No confirmation email`
+- Подожди 2-3 минуты
+- Проверь логи: `logs/app.log`
+- Запусти с `--debug` для детальной диагностики
 
-| Дистрибутив | Статус |
-|-------------|--------|
-| Debian 12 | Тестировано |
-| Debian 13 | Тестировано |
-| Arch Linux | Тестировано |
-| Ubuntu | Ожидается работа, не тестировано |
-| Fedora | Ожидается работа, не тестировано |
-| openSUSE | Ожидается работа, не тестировано |
-| Alpine | Ожидается работа, не тестировано |
-| Void Linux | Ожидается работа, не тестировано |
-| Gentoo | Ожидается работа, не тестировано |
-| Linux Mint | Ожидается работа, не тестировано |
-| Pop!_OS | Ожидается работа, не тестировано |
-| Rocky Linux | Ожидается работа, не тестировано |
-| AlmaLinux | Ожидается работа, не тестировано |
+## Отладка
 
-Тестирование проводилось в Docker-контейнерах.
+Подробные логи:
+```bash
+qf --debug
+```
 
----
+Логи сохраняются в `logs/app.log`. Краши — в `logs/crash-*.log`.
+
+## Требования
+
+- **Bun** ≥ 1.3
+- **Git** — любая версия
+- **Chromium** или **Google Chrome** — системный пакет
+- **ОС**: Linux (Windows через WSL)
 
 ## Документация
 
-- [Установка](./docs/installation.md)
-- [CLI и HTTP API](./docs/cli.md)
-- [Конфигурация](./docs/configuration.md)
-- [Решение проблем](./docs/troubleshooting.md)
-- [Разработка](./docs/development.md)
-- [Участие](./docs/contributing.md)
-
----
-
-## Участие
-
-Баги — через [Issues](https://github.com/alay-arch/qwen-forge/issues). Предложения — через Pull Requests. Подробности: [docs/contributing.md](./docs/contributing.md)
-
----
+- [Установка](docs/installation.md)
+- [CLI](docs/cli.md)
+- [Конфигурация](docs/configuration.md)
+- [Решение проблем](docs/troubleshooting.md)
+- [Разработка](docs/development.md)
 
 ## Лицензия
 

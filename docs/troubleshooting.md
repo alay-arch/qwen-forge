@@ -4,51 +4,43 @@
 
 ### `Application already running`
 
-Предыдущий процесс не завершился корректно.
-
 ```bash
 rm -f .qwen-forge.lock
 ```
 
 ### `No internet connection`
 
-Проверьте подключение к сети:
-
 ```bash
-ping -c 1 google.com
+ping -c 3 chat.qwen.ai
 ```
 
-### `Qwen unavailable`
-
-Сервис chat.qwen.ai может быть недоступен. Проверьте вручную в браузере.
+Проверь прокси, VPN, firewall.
 
 ---
 
-## Ошибки регистрации
+## Регистрация
 
-### `Failed to submit form`
+### `Registration failed`
 
-Возможные причины:
-- Изменилась структура страницы Qwen (селекторы устарели)
-- CAPTCHA / Cloudflare блокирует отправку
-- Проблемы с сетью
-
-### `Email not received`
-
-- Увеличьте `mail.timeout` в `config.json` (по умолчанию 180 с)
-- Проверьте CatchMail — возможна задержка доставки
-- Убедитесь, что email сгенерирован корректно
+- Проверь интернет
+- Запусти диагностику: `qf` → пункт 5
+- Qwen может временно блокировать регистрации — подожди и попробуй снова
 
 ### `Activation failed`
 
-- Откройте ссылку активации вручную в браузере
-- Возможно, ссылка истекла
+- Открой ссылку активации вручную в браузере
+- Ссылка могла истечь — создай аккаунт заново
+
+### `No confirmation email`
+
+- Подожди 2-3 минуты
+- Проверь `logs/app.log`
+- Запусти `qf --debug` для детальных логов
 
 ### `Logout failed`
 
-- Перезапустите приложение — logout повторится автоматически
-- Если проблема повторяется, очистите профиль браузера:
-
+- Перезапусти приложение — logout повторится автоматически
+- Очисти профиль браузера:
 ```bash
 rm -rf .browser-profile
 ```
@@ -57,43 +49,32 @@ rm -rf .browser-profile
 
 ## Chromium
 
-### Бинарник не найден
-
-Установите Chromium:
+### Браузер не найден
 
 ```bash
 # Debian / Ubuntu
 sudo apt install chromium-browser
 
-# Arch Linux
+# Arch
 sudo pacman -S chromium
 
 # Fedora
 sudo dnf install chromium
 ```
 
-### Недостающие разделяемые библиотеки
+### Недостающие библиотеки
 
-Диагностика (пункт меню 5) покажет конкретную отсутствующую `.so` библиотеку.
+Диагностика (`qf` → пункт 5) покажет конкретную `.so` библиотеку.
 
 ```bash
-# Debian / Ubuntu — пример для libnss3
+# Debian / Ubuntu
 sudo apt install libnss3 libatk-bridge2.0-0 libdrm2 libgbm1
 
-# Arch Linux
+# Arch
 sudo pacman -S nss atk at-spi2-atk libdrm mesa
 ```
 
-### Headless-запуск не работает
-
-Запустите диагностику:
-
-```bash
-qf
-# Пункт меню 5 — Диагностика
-```
-
-Или вручную:
+### Headless не запускается
 
 ```bash
 chromium --headless --no-sandbox --dump-dom https://example.com 2>&1
@@ -105,9 +86,9 @@ chromium --headless --no-sandbox --dump-dom https://example.com 2>&1
 
 ### Сервер не отвечает
 
-- Проверьте, что `qf` запущен
-- Проверьте порт: `curl http://localhost:3030/api/ping`
-- Если порт изменён в config.json, используйте актуальный
+- Проверь, что `qf` запущен
+- `curl http://localhost:3030/api/ping`
+- Если порт изменён в config.json — используй актуальный
 
 ### Порт занят
 
@@ -115,8 +96,7 @@ chromium --headless --no-sandbox --dump-dom https://example.com 2>&1
 lsof -i :3030
 ```
 
-Измените порт в `config.json`:
-
+Смени порт в `config.json`:
 ```json
 { "server": { "port": 8080 } }
 ```
@@ -127,28 +107,18 @@ lsof -i :3030
 
 ### `accounts.json` повреждён
 
-Файл находится в `data/accounts.json`. Если он содержит невалидный JSON:
-
 ```bash
 rm data/accounts.json
 ```
 
-Файл будет пересоздан при следующей регистрации. Данные будут потеряны.
+Файл пересоздастся при следующей регистрации. Данные будут потеряны.
 
 ---
 
-## Debug-режим
-
-Для детальной диагностики запустите:
+## Отладка
 
 ```bash
 qf --debug
 ```
 
-Выводится:
-- HTTP-запросы с таймингом
-- Операции браузера
-- Mail-сервис: polling, retry
-- Полные стеки ошибок
-
-Логи записываются в `logs/app.log`. Crash-отчёты — в `logs/crash-*.log`.
+Логи: `logs/app.log`. Краши: `logs/crash-*.log`.
