@@ -11,7 +11,7 @@
 [![Browserless](https://img.shields.io/badge/Stack-Browserless-8B5CF6)](https://bun.sh)
 
 <p align="center">
-  <a href="README.md">🇺🇸 English</a> | 🇷🇺 Русский
+  🇺🇸 English • <a href="README.ru.md">🇷🇺 Русский</a>
 </p>
 
 **v0.1.3-beta**
