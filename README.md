@@ -1,5 +1,15 @@
 # Qwen Forge
 
+<p align="center">
+  <img src="media/banner.png" alt="Qwen Forge Banner" width="100%">
+</p>
+
+![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
+![Version](https://img.shields.io/github/v/release/alay-arch/qwen-forge?style=flat-square)
+![Downloads](https://img.shields.io/github/downloads/alay-arch/qwen-forge/total?style=flat-square)
+![Bun](https://img.shields.io/badge/Bun-1.3+-pink?style=flat-square&logo=bun)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square&logo=typescript)
+
 **v0.1.3-beta**
 
 Автоматическая регистрация аккаунтов Qwen (chat.qwen.ai) через одноразовую почту.
