@@ -171,4 +171,4 @@ qf --debug
 
 ## Лицензия
 
-MIT
+[LICENSE](LICENSE).

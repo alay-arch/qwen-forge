@@ -171,4 +171,4 @@ Logs saved to `logs/app.log`. Crashes go to `logs/crash-*.log`.
 
 ## License
 
-MIT
+[LICENSE](LICENSE).
