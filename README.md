@@ -10,93 +10,97 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue)](https://www.typescriptlang.org/)
 [![Browserless](https://img.shields.io/badge/Stack-Browserless-8B5CF6)](https://bun.sh)
 
+<p align="center">
+  <a href="README.md">🇺🇸 English</a> | 🇷🇺 Русский
+</p>
+
 **v0.1.3-beta**
 
-Автоматическая регистрация аккаунтов Qwen (chat.qwen.ai) через одноразовую почту.
+Automated Qwen (chat.qwen.ai) account registration via disposable email.
 
-## Что это
+## What is this
 
-Qwen Forge регистрирует аккаунты на chat.qwen.ai без ручного ввода. Создаёт временный email, заполняет форму, подтверждает регистрацию, сохраняет данные.
+Qwen Forge registers accounts on chat.qwen.ai automatically. Creates temporary email, fills the form, confirms registration, saves credentials.
 
-**Зачем:**
-- Нужен аккаунт для тестирования
-- Массовая регистрация для команды
-- Автоматизация без ручного ввода
+**Why:**
+- Need an account for testing
+- Bulk registration for a team
+- Automation without manual input
 
-## Установка
+## Installation
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/alay-arch/qwen-forge/main/install.sh | bash
 ```
 
-Скрипт проверит зависимости (Bun, Git, Chromium), установит проект в `~/.qwen-forge` и создаст команду `qf`.
+The script checks dependencies (Bun, Git, Chromium), installs to `~/.qwen-forge`, and creates the `qf` command.
 
-После установки:
+After installation:
 ```bash
 source ~/.bashrc
 qf --version
 ```
 
-## Использование
+## Usage
 
-Запусти интерактивное меню:
+Launch interactive menu:
 ```bash
 qf
 ```
 
-Выбери действие:
+Select an action:
 ```
-1  Создать аккаунт
-2  Пакетное создание
-3  Сессия
-4  Статистика
-5  Диагностика
-6  Настройки
-0  Выход
+1  Create account
+2  Batch create
+3  Session
+4  Statistics
+5  Diagnostics
+6  Settings
+0  Exit
 ```
 
-### Примеры
+### Examples
 
-**Создать один аккаунт:**
+**Create one account:**
 ```bash
 qf
-# Выбери "1" → следуй инструкциям
+# Select "1" → follow prompts
 ```
 
-**Создать 10 аккаунтов:**
+**Create 10 accounts:**
 ```bash
 qf
-# Выбери "2" → введи "10"
+# Select "2" → enter "10"
 ```
 
-**Проверить систему:**
+**Check system:**
 ```bash
 qf
-# Выбери "5" → диагностика покажет проблемы
+# Select "5" → diagnostics shows issues
 ```
 
 ## HTTP API
 
-Сервер запускается автоматически на `localhost:3030`.
+Server starts automatically on `localhost:3030`.
 
-**Проверка:**
+**Health check:**
 ```bash
 curl http://localhost:3030/api/ping
 ```
 
-**Создать аккаунт:**
+**Create account:**
 ```bash
 curl -X POST http://localhost:3030/api/register
 ```
 
-**Выйти:**
+**Logout:**
 ```bash
 curl -X POST http://localhost:3030/api/logout
 ```
 
-## Конфигурация
+## Configuration
 
-Настройки в `config.json`:
+Settings in `config.json`:
 
 ```json
 {
@@ -104,19 +108,19 @@ curl -X POST http://localhost:3030/api/logout
   "server": { "port": 3030 },
   "browser": { "profileDir": ".browser-profile", "timeout": 30000 },
   "mail": { "apiUrl": "https://api.catchmail.io/api/v1", "domain": "catchmail.io" },
-  "cli": { "language": "ru" }
+  "cli": { "language": "en" }
 }
 ```
 
-**Параметры:**
-- `server.port` — порт HTTP API
-- `browser.timeout` — таймаут операций (мс)
-- `cli.language` — язык интерфейса (`ru` или `en`)
+**Parameters:**
+- `server.port` — HTTP API port
+- `browser.timeout` — operation timeout (ms)
+- `cli.language` — interface language (`ru` or `en`)
 
-## Типичные проблемы
+## Common issues
 
 ### `Chromium not found`
-Установи Chromium:
+Install Chromium:
 ```bash
 # Debian/Ubuntu
 sudo apt install chromium-browser
@@ -126,7 +130,7 @@ sudo pacman -S chromium
 ```
 
 ### `Missing shared libraries`
-Установи зависимости:
+Install dependencies:
 ```bash
 # Debian/Ubuntu
 sudo apt install libnss3 libatk-bridge2.0-0 libdrm2 libgbm1
@@ -136,39 +140,39 @@ sudo pacman -S nss atk at-spi2-atk libdrm mesa
 ```
 
 ### `Registration failed`
-- Проверь интернет
-- Запусти диагностику: `qf` → пункт 5
-- Попробуй позже (возможны лимиты Qwen)
+- Check internet connection
+- Run diagnostics: `qf` → option 5
+- Try later (Qwen may have limits)
 
 ### `No confirmation email`
-- Подожди 2-3 минуты
-- Проверь логи: `logs/app.log`
-- Запусти с `--debug` для детальной диагностики
+- Wait 2-3 minutes
+- Check logs: `logs/app.log`
+- Run with `--debug` for detailed diagnostics
 
-## Отладка
+## Debug
 
-Подробные логи:
+Detailed logs:
 ```bash
 qf --debug
 ```
 
-Логи сохраняются в `logs/app.log`. Краши — в `logs/crash-*.log`.
+Logs saved to `logs/app.log`. Crashes go to `logs/crash-*.log`.
 
-## Требования
+## Requirements
 
 - **Bun** ≥ 1.3
-- **Git** — любая версия
-- **Chromium** или **Google Chrome** — системный пакет
-- **ОС**: Linux (Windows через WSL)
+- **Git** — any version
+- **Chromium** or **Google Chrome** — system package
+- **OS**: Linux (Windows via WSL)
 
-## Документация
+## Documentation
 
-- [Установка](docs/installation.md)
-- [CLI](docs/cli.md)
-- [Конфигурация](docs/configuration.md)
-- [Решение проблем](docs/troubleshooting.md)
-- [Разработка](docs/development.md)
+- [Installation](docs/installation.en.md)
+- [CLI](docs/cli.en.md)
+- [Configuration](docs/configuration.en.md)
+- [Troubleshooting](docs/troubleshooting.en.md)
+- [Development](docs/development.en.md)
 
-## Лицензия
+## License
 
 [LICENSE](LICENSE).
